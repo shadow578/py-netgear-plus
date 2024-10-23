@@ -4,12 +4,12 @@ build-backend = "hatchling.build"
 
 [project]
 name = "netgear-plus"
-version = "0.0.1"
+dynamic = ["version"]
 authors = [
-  { name="Christian Karrié", email="ckarrie@gmail.com" },
   { name="Michiel Fokke", email="github@fokke.org" },
+  { name="Christian Karrié", email="ckarrie@gmail.com" },
 ]
-description = "A library for interacting with Netgear Plus routers."
+description = "A library for interacting with Netgear Plus switches."
 readme = "README.md"
 requires-python = ">=3.8"
 classifiers = [
@@ -23,6 +23,12 @@ dependencies = [
     "lxml",
 ]
 
+[project.scripts]
+ngp-cli = "netgear_plus_cli:main"
+
 [project.urls]
 Homepage = "https://github.com/foxey/py-netgear-plus"
 Issues = "https://github.com/foxey/py-netgear-plus/issues"
+
+[tool.hatch.version]
+path = "src/netgear_plus/__init__.py"

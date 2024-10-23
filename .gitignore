@@ -11,3 +11,4 @@ src/secrets.py
 .coverage
 coverage.xml
 .ruff_cache
+.pypirc

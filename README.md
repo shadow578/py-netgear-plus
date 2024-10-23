@@ -15,26 +15,26 @@ some basic configuration updates.
 
 ### List of port statistics
 
-| Name                          | mapped key from `get_switch_infos()` | Unit                                |
-| ----------------------------- | ------------------------------------ | ----------------------------------- |
-| Port {port} Traffic Received  | `port_{port}_traffic_rx_mbytes`      | MB (in response time)               |
-| Port {port} Traffic Sent      | `port_{port}_traffic_tx_mbytes`      | MB (in response time)               |
-| Port {port} Receiving         | `port_{port}_speed_rx_mbytes`        | MB/s                                |
-| Port {port} Transferring      | `port_{port}_speed_tx_mbytes`        | MB/s                                |
-| Port {port} IO                | `port_{port}_speed_io_mbytes`        | MB/s                                |
-| Port {port} Total Received    | `port_{port}_sum_rx_mbytes`          | MB (since last switch reboot/reset) |
-| Port {port} Total Transferred | `port_{port}_sum_tx_mbytes`          | MB (since last switch reboot/reset) |
-| Port {port} Connection Speed  | `port_{port}_connection_speed`       | MB/s                                |
-| Port {port} Status            | `port_{port}_status`                 | "on"/"off"                          |
-| Port {poe_port} POE Power     | `port_{poe_port}_poe_power_active`   | "on"/"off"                          |
+| Name                          | key from `get_switch_infos()`      | Unit                                |
+| ----------------------------- | ---------------------------------- | ----------------------------------- |
+| Port {port} Traffic Received  | `port_{port}_traffic_rx_mbytes`    | MB (in response time)               |
+| Port {port} Traffic Sent      | `port_{port}_traffic_tx_mbytes`    | MB (in response time)               |
+| Port {port} Receiving         | `port_{port}_speed_rx_mbytes`      | MB/s                                |
+| Port {port} Transferring      | `port_{port}_speed_tx_mbytes`      | MB/s                                |
+| Port {port} IO                | `port_{port}_speed_io_mbytes`      | MB/s                                |
+| Port {port} Total Received    | `port_{port}_sum_rx_mbytes`        | MB (since last switch reboot/reset) |
+| Port {port} Total Transferred | `port_{port}_sum_tx_mbytes`        | MB (since last switch reboot/reset) |
+| Port {port} Connection Speed  | `port_{port}_connection_speed`     | MB/s                                |
+| Port {port} Status            | `port_{port}_status`               | "on"/"off"                          |
+| Port {poe_port} POE Power     | `port_{poe_port}_poe_power_active` | "on"/"off"                          |
 
 ### List of aggregated statistics
 
-| Sensor Name                | mapped key from `get_switch_infos()` | Unit                  |
-| -------------------------- | ------------------------------------ | --------------------- |
-| Switch IO                  | `sum_port_speed_bps_io`              | MB/s                  |
-| Switch Traffic Received    | `sum_port_traffic_rx`                | MB (in response time) |
-| Switch Traffic Transferred | `sum_port_traffic_tx`                | MB (in response time) |
+| Sensor Name             | key from `get_switch_infos()` | Unit                  |
+| ----------------------- | ----------------------------- | --------------------- |
+| Switch IO               | `sum_port_speed_bps_io`       | MB/s                  |
+| Switch Traffic Received | `sum_port_traffic_rx`         | MB (in response time) |
+| Switch Traffic Sent     | `sum_port_traffic_tx`         | MB (in response time) |
 
 ## Supported and tested NETGEAR Models/Products and firmware versions
 

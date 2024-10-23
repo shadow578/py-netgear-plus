@@ -11,6 +11,8 @@ from lxml import html
 
 from . import models, netgear_crypt
 
+__version__ = "0.1.4"
+
 SWITCH_STATES = ["on", "off"]
 
 API_V2_CHECKS = {
@@ -172,6 +174,8 @@ passed_checks_by_model=%s matched_models=%s",
 
     def check_login_form_rand(self) -> bool:
         """Check if login form contain hidden *rand* input."""
+        if self._login_page_response is None or not self._login_page_response.content:
+            return False
         tree = html.fromstring(self._login_page_response.content)
         input_rand_elems = tree.xpath('//input[@id="rand"]')
         user_password = self._password
@@ -182,7 +186,7 @@ passed_checks_by_model=%s matched_models=%s",
             self._login_page_form_password = md5_str
             return True
         self._login_page_form_password = user_password
-        return False
+        return True
 
     def check_login_title_tag(self) -> str:
         """For new firmwares V2.06.10, V2.06.17, V2.06.24."""
@@ -228,7 +232,7 @@ try NetgearSwitchConnector.autodetect_model"
 
     def get_login_cookie(self) -> bool:
         """Login and save returned cookie."""
-        if not self.switch_model:
+        if not self.switch_model or self.switch_model.MODEL_NAME == "":
             self.autodetect_model()
         response = None
         login_password = self.get_login_password()
