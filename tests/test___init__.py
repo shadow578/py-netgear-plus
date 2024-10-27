@@ -1,6 +1,5 @@
 """Unit tests for the netgear_plus __init__ module."""
 
-
 from netgear_plus import (
     _from_bytes_to_megabytes,
 )
