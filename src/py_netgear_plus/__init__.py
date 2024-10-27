@@ -11,7 +11,7 @@ from lxml import html
 
 from . import models, netgear_crypt
 
-__version__ = "0.1.8"
+__version__ = "0.1.9"
 
 SWITCH_STATES = ["on", "off"]
 

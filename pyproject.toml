@@ -3,32 +3,29 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "netgear-plus"
+name = "py-netgear-plus"
 dynamic = ["version"]
 authors = [
-  { name="Michiel Fokke", email="github@fokke.org" },
-  { name="Christian Karrié", email="ckarrie@gmail.com" },
+  { name = "Michiel Fokke", email = "github@fokke.org" },
+  { name = "Christian Karrié", email = "ckarrie@gmail.com" },
 ]
 description = "A library for interacting with Netgear Plus switches."
 readme = "README.md"
 requires-python = ">=3.8"
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: Apache Software License",
-    "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
 ]
 keywords = ["netgear", "plus", "switch", "api", "library"]
-dependencies = [
-    "requests",
-    "lxml",
-]
+dependencies = ["requests", "lxml"]
 
 [project.scripts]
-ngp-cli = "netgear_plus_cli:main"
+ngp-cli = "py_netgear_plus_cli:main"
 
 [project.urls]
 Homepage = "https://github.com/foxey/py-netgear-plus"
 Issues = "https://github.com/foxey/py-netgear-plus/issues"
 
 [tool.hatch.version]
-path = "src/netgear_plus/__init__.py"
+path = "src/py_netgear_plus/__init__.py"

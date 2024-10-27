@@ -25,7 +25,7 @@ import time
 from pathlib import Path
 from sys import stderr
 
-from netgear_plus import (
+from py_netgear_plus import (
     LoginFailedError,
     NetgearSwitchConnector,
     SwitchModelNotDetectedError,
