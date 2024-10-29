@@ -45,7 +45,7 @@ jobs:
 
       - name: Test package
         run: |
-          python -m pytest
+          python -m pytest --cov=src/py_netgear_plus tests
 
       - name: Publish package
         uses: pypa/gh-action-pypi-publish@v1.10.3

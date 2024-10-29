@@ -5,7 +5,7 @@
         "Netgear"
     ],
     "python.testing.pytestArgs": [
-        "tests"
+        "--cov=src/py_netgear_plus tests"
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true

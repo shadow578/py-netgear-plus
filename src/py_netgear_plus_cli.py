@@ -69,7 +69,7 @@ def main() -> None:
     parser.add_argument("host", help="Netgear Switch IP address")
     parser.add_argument(
         "--password",
-        "-p",
+        "-P",
         help="Password for the switch",
         default=os.getenv("NETGEAR_PLUS_PASSWORD"),
     )
@@ -92,11 +92,21 @@ def main() -> None:
         help="Output in JSON format",
         action="store_true",
     )
+
+    parser.add_argument(
+        "--path",
+        "-p",
+        help="Path to save pages and parsed data",
+        type=str,
+        default="pages",
+    )
     subparsers = parser.add_subparsers(dest="command")
 
     subparsers.add_parser("identify", help="Identify the switch model")
     subparsers.add_parser("login", help="Login to the switch and save the cookie")
     subparsers.add_parser("logout", help="Logout from the switch and delete the cookie")
+    subparsers.add_parser("save", help="Save pages to file")
+    subparsers.add_parser("parse", help="Parse pages and save data to file")
     subparsers.add_parser("status", help="Display switch status")
 
     args = parser.parse_args()
@@ -124,6 +134,8 @@ def main() -> None:
         "login": login_command,
         "logout": logout_command,
         "status": status_command,
+        "save": save_command,
+        "parse": parse_command,
     }
 
     if args.command in command_functions:
@@ -159,7 +171,10 @@ def login_command(connector: NetgearSwitchConnector, args: argparse.Namespace) -
 
 def logout_command(connector: NetgearSwitchConnector, args: argparse.Namespace) -> bool:  # noqa: ARG001
     """Logout from the switch and delete the cookie."""
-    load_cookie(connector)
+    if not load_cookie(connector):
+        print("Not logged in.", file=stderr)  # noqa: T201
+        return False
+    connector.autodetect_model()
     if connector.delete_login_cookie() and Path(COOKIE_FILE).unlink():
         return True
     print("Logout failed.", file=stderr)  # noqa: T201
@@ -168,7 +183,9 @@ def logout_command(connector: NetgearSwitchConnector, args: argparse.Namespace) 
 
 def status_command(connector: NetgearSwitchConnector, args: argparse.Namespace) -> bool:
     """Display switch status."""
-    load_cookie(connector)
+    if not load_cookie(connector):
+        print("Not logged in.", file=stderr)  # noqa: T201
+        return False
     switch_infos = connector.get_switch_infos()
     time.sleep(5)
     if args.json:
@@ -181,6 +198,27 @@ def status_command(connector: NetgearSwitchConnector, args: argparse.Namespace) 
             print(f"{key.ljust(max_key_length)}\t{switch_infos[key]}")  # noqa: T201
 
     return bool(switch_infos)
+
+
+def save_command(connector: NetgearSwitchConnector, args: argparse.Namespace) -> bool:
+    """Save pages to file."""
+    if not load_cookie(connector):
+        print("Not logged in.", file=stderr)  # noqa: T201
+        return False
+    if not Path(args.path).exists():
+        Path(args.path).mkdir(parents=True, exist_ok=True)
+    connector.save_pages(args.path)
+    return True
+
+
+def parse_command(connector: NetgearSwitchConnector, args: argparse.Namespace) -> bool:
+    """Save parsed data to file."""
+    if not Path(args.path).exists():
+        print(f"Path does not exist: {args.path}", file=stderr)  # noqa: T201
+        return False
+    connector.turn_on_offline_mode(args.path)
+    connector.save_switch_infos(args.path)
+    return True
 
 
 if __name__ == "__main__":

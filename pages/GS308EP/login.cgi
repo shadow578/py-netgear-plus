@@ -1,26 +1,25 @@
 <!DOCTYPE html>
-<html><head>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<link rel="stylesheet" type="text/css" href="GS308EP_login.cgi_files/login.css">
+<link rel="stylesheet" type="text/css" href="/login.css">
 <title>NETGEAR GS308EP</title>
-<script src="GS308EP_login.cgi_files/zepto.min.js" type="text/javascript"></script>
-<script src="GS308EP_login.cgi_files/login.js" type="text/javascript"></script>
-<script src="GS308EP_login.cgi_files/b_md5.js" type="text/javascript"></script>
+<script src="/zepto.min.js" type="text/javascript"></script>
+<script src="/login.js" type="text/javascript"></script>
+<script src="/b_md5.js" type="text/javascript"></script>
 </head>
 <body class="bodyBg">
-<form name="login" action="/login.cgi" method="post" onsubmit="return false;" data-bitwarden-watching="1">
+<form name="login" action="/login.cgi" method="post" onSubmit="return false;">
   <input id="submitPwd" name="password" type="hidden" value="">
   <div class="loginBody">
     <div class="switch">
-      <div class="switch-icon"><img src="GS308EP_login.cgi_files/switch-logo.svg" class="switch_image"></div>
+      <div class="switch-icon"><img src="/switch-logo.svg" class="switch_image"></div>
 <span class="p-name">GS308EP</span>
     </div>
     <div class="summary">
-      <span>If logging in for the first time, log in with your switch's 
-default password which is found on the label on the bottom of the 
-switch.</span>
+      <span>If logging in for the first time, log in with your switch's default password which is found on the label on the bottom of the switch.</span>
     </div>
     <div class="text-field">
       <label for="password" class="pwd-label">Device Password</label>
@@ -35,9 +34,9 @@ switch.</span>
         <i class="icon-eye-on"></i>
       </div>
     </div>
-<div class="pwdErrStyle"></div>
-<input type="hidden" id="acptLang" value="en" disabled="disabled"><input type="hidden" id="rand" value="990464497" disabled="disabled"><div class="signin-button" style="cursor:pointer;">
-      <div style="height:2.75rem;" onclick="encryptPwd();submitLogin()"><a id="loginBtn" href="javascript:void(0)" class="button-label">LOG IN</a></div>
+<div class='pwdErrStyle'></div>
+<input type=hidden id='acptLang' value='en' disabled><input type=hidden id='rand' value='990464497' disabled><div class="signin-button" style='cursor:pointer;'>
+      <div style='height:2.75rem;' onclick="encryptPwd();submitLogin()"><a id="loginBtn" href="javaScript:void(0)" class="button-label">LOG IN</a></div>
     </div>
   </div>
   </form>
@@ -47,6 +46,5 @@ switch.</span>
             $(".pwdErrStyle").html(transParamLang($(".pwdErrStyle").text()));
         });
     </script>
- 
-
-</body></html>
+ </body>
+</html>

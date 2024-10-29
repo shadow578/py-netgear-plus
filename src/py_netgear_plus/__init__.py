@@ -1,8 +1,10 @@
 """Netgear API."""
 
 import contextlib
+import json
 import logging
 import time
+from pathlib import Path
 from typing import Any
 
 import requests
@@ -11,7 +13,7 @@ from lxml import html
 
 from . import models, netgear_crypt
 
-__version__ = "0.1.9"
+__version__ = "0.2.0"
 
 SWITCH_STATES = ["on", "off"]
 
@@ -49,6 +51,20 @@ class PageNotLoadedError(Exception):
     """Failed to load the page."""
 
 
+class BaseResponse:
+    """Base class for response objects."""
+
+    def __init__(self) -> None:
+        """Initialize BaseResponse Object."""
+        self.status_code = requests.codes.ok
+        self.content = b""
+        self.cookies = requests.cookies.RequestsCookieJar()
+
+    def __bool__(self) -> bool:
+        """Return True if status code is 200."""
+        return self.status_code == requests.codes.ok
+
+
 class NetgearSwitchConnector:
     """Representation of a Netgear Switch."""
 
@@ -64,6 +80,10 @@ class NetgearSwitchConnector:
         self.poe_ports = []
         self.port_status = {}
         self._switch_bootloader = "unknown"
+
+        # offline mode settings
+        self.offline_mode = False
+        self.offline_path_prefix = ""
 
         # sleep time between requests
         self.sleep_time = 0.25
@@ -86,6 +106,11 @@ class NetgearSwitchConnector:
         # current data
         self._loaded_switch_infos = {}
 
+    def turn_on_offline_mode(self, path_prefix: str) -> None:
+        """Turn on offline mode."""
+        self.offline_mode = True
+        self.offline_path_prefix = path_prefix
+
     def autodetect_model(self) -> models.AutodetectedSwitchModel:
         """Detect switch model from login page contents."""
         _LOGGER.debug(
@@ -95,12 +120,18 @@ class NetgearSwitchConnector:
             url = template["url"].format(ip=self.host)
             method = template["method"]
 
-            response = requests.request(
-                method,
-                url,
-                allow_redirects=False,
-                timeout=self.LOGIN_URL_REQUEST_TIMEOUT,
-            )
+            response = BaseResponse()
+            if not self.offline_mode:
+                response = requests.request(
+                    method,
+                    url,
+                    allow_redirects=False,
+                    timeout=self.LOGIN_URL_REQUEST_TIMEOUT,
+                )
+            else:
+                page_name = url.split("/")[-1]
+                with Path(f"{self.offline_path_prefix}/{page_name}").open() as file:
+                    response.content = file.read().encode("utf-8")
 
             if response and response.status_code == requests.codes.ok:
                 self._login_page_response = response
@@ -310,10 +341,10 @@ Response from switch: "%s"',
         timeout: int = 0,
         allow_redirects: bool = False,
     ) -> requests.Response:
-        if (
-            not self.cookie_name or not self.cookie_content
-        ) and not self.get_login_cookie():
-            return requests.Response()
+        if not self.cookie_name or not self.cookie_content:
+            success = self.get_login_cookie()
+            if not success:
+                return requests.Response()
         if timeout == 0:
             timeout = self.LOGIN_URL_REQUEST_TIMEOUT
         jar = requests.cookies.RequestsCookieJar()
@@ -350,16 +381,23 @@ Response from switch: "%s"',
                 )
         return response
 
-    def fetch_page(self, templates: list, client_hash: str = "") -> requests.Response:
+    def fetch_page(
+        self, templates: list, client_hash: str = ""
+    ) -> requests.Response | BaseResponse:
         """Return response for 1st successful request from templates."""
-        data = {}
-        response = requests.Response()
+        response = BaseResponse()
         for template in templates:
             url = template["url"].format(ip=self.host)
-            method = template["method"]
-            if method == "post" and client_hash != "":
-                data = {"hash": client_hash}
-            response = self._request(method, url, data)
+            if not self.offline_mode:
+                method = template["method"]
+                data = {}
+                if method == "post" and client_hash != "":
+                    data = {"hash": client_hash}
+                response = self._request(method, url, data)
+            else:
+                page_name = url.split("/")[-1]
+                with Path(f"{self.offline_path_prefix}/{page_name}").open() as file:
+                    response.content = file.read().encode("utf-8")  # type: ignore reportAttributeAccessIssue
             if response.status_code == requests.codes.ok:
                 break
         if response.status_code != requests.codes.ok:
@@ -606,7 +644,10 @@ Response from switch: "%s"',
         time.sleep(self.sleep_time)
         switch_data.update(self._get_port_status())
 
-        sample_time = _start_time - self._previous_timestamp
+        if not self.offline_mode:
+            sample_time = _start_time - self._previous_timestamp
+        else:
+            sample_time = 0
         switch_data["response_time_s"] = round(sample_time, 1)
 
         self._update_current_data(current_data, switch_data, sample_time)
@@ -687,7 +728,7 @@ Response from switch: "%s"',
         self, current_data: dict, switch_data: dict, sample_time: float
     ) -> None:
         """Update current data with calculated values."""
-        sample_factor = 1 / sample_time
+        sample_factor = 1 if not sample_time else 1 / sample_time
         for port_number0 in range(self.ports):
             try:
                 port_number = port_number0 + 1
@@ -956,3 +997,39 @@ Response from switch: "%s"',
                     resp.content.strip(),
                 )
         return False
+
+    def save_pages(self, path_prefix: str = "") -> None:
+        """Save all pages to files for debugging."""
+        if not self.switch_model or not self.switch_model.MODEL_NAME:
+            self.autodetect_model()
+        if not Path(path_prefix).exists():
+            Path(path_prefix).mkdir(parents=True)
+        login_template = self.switch_model.LOGIN_TEMPLATE
+        login_template["method"] = "get"
+        for template in [
+            login_template,
+            *self.switch_model.SWITCH_INFO_TEMPLATES,
+            *self.switch_model.PORT_STATISTICS_TEMPLATES,
+            *self.switch_model.POE_PORT_CONFIG_TEMPLATES,
+            *self.switch_model.POE_PORT_STATUS_TEMPLATES,
+        ]:
+            url = template["url"].format(ip=self.host)
+            response = self.fetch_page(
+                [template],
+                client_hash=self._client_hash,
+            )
+            if response.status_code == requests.codes.ok:
+                page_name = url.split("/")[-1]
+                with Path(f"pages/{page_name}").open("wb") as file:
+                    file.write(response.content)
+            else:
+                _LOGGER.warning("NetgearSwitchConnector.save_pages failed for %s", url)
+
+    def save_switch_infos(self, path_prefix: str = "") -> None:
+        """Save switch info to file for debugging."""
+        if not self.switch_model and not self.switch_model.MODEL_NAME:
+            self.autodetect_model()
+        if not Path(path_prefix).exists():
+            Path(path_prefix).mkdir(parents=True)
+        with Path(f"{path_prefix}/switch_infos.json").open("w") as file:
+            json.dump(self.get_switch_infos(), file, indent=4)
