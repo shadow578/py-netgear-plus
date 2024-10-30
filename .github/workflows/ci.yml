@@ -46,6 +46,7 @@ jobs:
       - name: Build packages
         run: |
           python -m build
+        if: contains(github.ref, 'refs/tags')
 
       - name: Publish package
         uses: pypa/gh-action-pypi-publish@v1.10.3
