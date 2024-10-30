@@ -63,6 +63,14 @@ def load_cookie(
     return False
 
 
+def save_switch_infos(path_prefix: str, switch_infos: dict) -> None:
+    """Save switch info to file for debugging."""
+    if not Path(path_prefix).exists():
+        Path(path_prefix).mkdir(parents=True)
+    with Path(f"{path_prefix}/switch_infos.json").open("w") as file:
+        json.dump(switch_infos, file, indent=4)
+
+
 def main() -> None:
     """Parse arguments and execute the corresponding command."""
     parser = argparse.ArgumentParser(description="Netgear Plus CLI")
@@ -80,6 +88,12 @@ def main() -> None:
         action="store_true",
     )
     parser.add_argument(
+        "--verbose",
+        "-v",
+        help="Be talkative",
+        action="store_true",
+    )
+    parser.add_argument(
         "--filter",
         "-f",
         help="Filter output by the provided string",
@@ -92,7 +106,6 @@ def main() -> None:
         help="Output in JSON format",
         action="store_true",
     )
-
     parser.add_argument(
         "--path",
         "-p",
@@ -102,11 +115,12 @@ def main() -> None:
     )
     subparsers = parser.add_subparsers(dest="command")
 
+    subparsers.add_parser("collect", help="Collect a full set of data for testing")
     subparsers.add_parser("identify", help="Identify the switch model")
     subparsers.add_parser("login", help="Login to the switch and save the cookie")
     subparsers.add_parser("logout", help="Logout from the switch and delete the cookie")
-    subparsers.add_parser("save", help="Save pages to file")
     subparsers.add_parser("parse", help="Parse pages and save data to file")
+    subparsers.add_parser("save", help="Save pages to file")
     subparsers.add_parser("status", help="Display switch status")
 
     args = parser.parse_args()
@@ -130,12 +144,13 @@ def main() -> None:
     connector = NetgearSwitchConnector(args.host, args.password)
 
     command_functions = {
+        "collect": collect_command,
         "identify": identify_command,
         "login": login_command,
         "logout": logout_command,
-        "status": status_command,
-        "save": save_command,
         "parse": parse_command,
+        "save": save_command,
+        "status": status_command,
     }
 
     if args.command in command_functions:
@@ -186,12 +201,14 @@ def status_command(connector: NetgearSwitchConnector, args: argparse.Namespace) 
     if not load_cookie(connector):
         print("Not logged in.", file=stderr)  # noqa: T201
         return False
+    if args.verbose:
+        print("Getting switch infos...", file=stderr)  # noqa: T201
     switch_infos = connector.get_switch_infos()
-    time.sleep(5)
+    time.sleep(10)
+    switch_infos = connector.get_switch_infos()
     if args.json:
         print(json.dumps(switch_infos, indent=4))  # noqa: T201
         return True
-    switch_infos = connector.get_switch_infos()
     max_key_length = max(len(key) for key in switch_infos)
     for key in sorted(switch_infos.keys()):
         if not args.filter or args.filter in key:
@@ -207,6 +224,8 @@ def save_command(connector: NetgearSwitchConnector, args: argparse.Namespace) ->
         return False
     if not Path(args.path).exists():
         Path(args.path).mkdir(parents=True, exist_ok=True)
+    if args.verbose:
+        print("Saving html pages...", file=stderr)  # noqa: T201
     connector.save_pages(args.path)
     return True
 
@@ -216,8 +235,44 @@ def parse_command(connector: NetgearSwitchConnector, args: argparse.Namespace) -
     if not Path(args.path).exists():
         print(f"Path does not exist: {args.path}", file=stderr)  # noqa: T201
         return False
+    if args.verbose:
+        print("Parsing html pages...", file=stderr)  # noqa: T201
     connector.turn_on_offline_mode(args.path)
-    connector.save_switch_infos(args.path)
+    connector.turn_on_offline_mode(args.path)
+    switch_infos = connector.get_switch_infos()
+    switch_infos["switch_ip"] = "192.168.0.1"
+    save_switch_infos(args.path, switch_infos)
+    return True
+
+
+def collect_command(
+    connector: NetgearSwitchConnector, args: argparse.Namespace
+) -> bool:
+    """Save pages to file."""
+    if not load_cookie(connector):
+        print("Not logged in.", file=stderr)  # noqa: T201
+        return False
+    model_name = connector.autodetect_model().MODEL_NAME
+    n = ["first", "second"]
+    for i in range(2):
+        if i:
+            if args.verbose:
+                print("Waiting 10 seconds...", file=stderr)  # noqa: T201
+            time.sleep(10)
+        path = f"{args.path}/{model_name}/{i}"
+        if not Path(path).exists():
+            Path(path).mkdir(parents=True, exist_ok=True)
+        if args.verbose:
+            print(f"Saving {n[i]} set of pages in {path}", file=stderr)  # noqa: T201
+        connector.save_pages(path)
+    for i in range(2):
+        path = f"{args.path}/{model_name}/{i}"
+        if args.verbose:
+            print(f"Parsing {n[i]} set of pages in {path}", file=stderr)  # noqa: T201
+        connector.turn_on_offline_mode(path)
+        switch_infos = connector.get_switch_infos()
+        switch_infos["switch_ip"] = "192.168.0.1"
+        save_switch_infos(path, switch_infos)
     return True
 
 

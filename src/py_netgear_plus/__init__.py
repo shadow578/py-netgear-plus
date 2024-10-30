@@ -1,7 +1,6 @@
 """Netgear API."""
 
 import contextlib
-import json
 import logging
 import time
 from pathlib import Path
@@ -13,7 +12,7 @@ from lxml import html
 
 from . import models, netgear_crypt
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 SWITCH_STATES = ["on", "off"]
 
@@ -110,6 +109,10 @@ class NetgearSwitchConnector:
         """Turn on offline mode."""
         self.offline_mode = True
         self.offline_path_prefix = path_prefix
+
+    def turn_on_online_mode(self) -> None:
+        """Turn on online mode."""
+        self.offline_mode = False
 
     def autodetect_model(self) -> models.AutodetectedSwitchModel:
         """Detect switch model from login page contents."""
@@ -313,7 +316,7 @@ Response from switch: "%s"',
             )
         return False
 
-    def _is_authenticated(self, response: requests.Response) -> bool:
+    def _is_authenticated(self, response: requests.Response | BaseResponse) -> bool:
         """Check for redirect to login when not authenticated (anymore)."""
         if "content" in dir(response):
             title = html.fromstring(response.content).xpath("//title")
@@ -801,7 +804,7 @@ Response from switch: "%s"',
                         )
 
             # Highpass-Filter (max 1e9 B/s = 1GB/s per port)
-            hp_max_traffic = 1e9 * sample_time
+            hp_max_traffic = 1e9 / sample_factor
             current_data[f"port_{port_number}_traffic_rx"] = min(
                 current_data[f"port_{port_number}_traffic_rx"], hp_max_traffic
             )
@@ -1018,18 +1021,11 @@ Response from switch: "%s"',
                 [template],
                 client_hash=self._client_hash,
             )
-            if response.status_code == requests.codes.ok:
+            if response.status_code == requests.codes.ok and self._is_authenticated(
+                response
+            ):
                 page_name = url.split("/")[-1]
-                with Path(f"pages/{page_name}").open("wb") as file:
+                with Path(f"{path_prefix}/{page_name}").open("wb") as file:
                     file.write(response.content)
             else:
                 _LOGGER.warning("NetgearSwitchConnector.save_pages failed for %s", url)
-
-    def save_switch_infos(self, path_prefix: str = "") -> None:
-        """Save switch info to file for debugging."""
-        if not self.switch_model and not self.switch_model.MODEL_NAME:
-            self.autodetect_model()
-        if not Path(path_prefix).exists():
-            Path(path_prefix).mkdir(parents=True)
-        with Path(f"{path_prefix}/switch_infos.json").open("w") as file:
-            json.dump(self.get_switch_infos(), file, indent=4)
