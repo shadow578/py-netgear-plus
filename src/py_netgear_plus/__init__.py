@@ -12,7 +12,7 @@ from lxml import html
 
 from . import models, netgear_crypt
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 
 SWITCH_STATES = ["on", "off"]
 DEFAULT_PAGE = "index.htm"
