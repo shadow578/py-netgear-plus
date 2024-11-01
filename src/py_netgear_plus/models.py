@@ -6,6 +6,7 @@ from typing import ClassVar
 class AutodetectedSwitchModel:
     """Netgear Plus Switch Model Definition."""
 
+    SUPPORTED = True
     ALLOWED_COOKIE_TYPES: ClassVar = ["SID"]
     MODEL_NAME = ""
     PORTS = 0
@@ -32,12 +33,22 @@ class AutodetectedSwitchModel:
         {"method": "get", "url": "http://{ip}/switch_info.cgi"},
     ]
     PORT_STATISTICS_TEMPLATES: ClassVar = [
-        {"method": "post", "url": "http://{ip}/portStatistics.cgi"}
+        {
+            "method": "post",
+            "url": "http://{ip}/portStatistics.cgi",
+            "params": {"hash": "_client_hash"},
+        }
     ]
     PORT_STATUS_TEMPLATES: ClassVar = [
-        {"method": "post", "url": "http://{ip}/status.htm"}
+        {
+            "method": "post",
+            "url": "http://{ip}/status.htm",
+            "params": {"hash": "_client_hash"},
+        }
     ]
     POE_PORT_CONFIG_TEMPLATES: ClassVar = []
+    SWITCH_POE_PORT_TEMPLATES: ClassVar = []
+    CYCLE_POE_PORT_TEMPLATES: ClassVar = []
     POE_PORT_STATUS_TEMPLATES: ClassVar = []
     LOGOUT_TEMPLATES: ClassVar = [{"method": "post", "url": "http://{ip}/logout.cgi"}]
 
@@ -118,6 +129,20 @@ class GS3xxSeries(AutodetectedSwitchModel):
     POE_PORT_CONFIG_TEMPLATES: ClassVar = [
         {"method": "get", "url": "http://{ip}/PoEPortConfig.cgi"}
     ]
+    SWITCH_POE_PORT_TEMPLATES: ClassVar = [
+        {
+            "method": "post",
+            "url": "http://{ip}/PoEPortConfig.cgi",
+            "params": {"hash": "_client_hash"},
+        }
+    ]
+    CYCLE_POE_PORT_TEMPLATES: ClassVar = [
+        {
+            "method": "post",
+            "url": "http://{ip}/PoEPortConfig.cgi",
+            "params": {"hash": "_client_hash"},
+        }
+    ]
     POE_PORT_STATUS_TEMPLATES: ClassVar = [
         {"method": "get", "url": "http://{ip}/getPoePortStatus.cgi"}
     ]
@@ -152,12 +177,29 @@ class GS308EP(GS3xxSeries):
 class GS316EP(GS3xxSeries):
     """Definition for Netgear GS316EP model."""
 
+    SUPPORTED = False
     MODEL_NAME = "GS316EP"
     PORTS = 16
-    POE_PORTS: ClassVar = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
-    POE_MAX_POWER_ALL_PORTS = 180
-    POE_MAX_POWER_SINGLE_PORT = 30
-    POE_SCHEDULING = True
+    POE_PORTS_NOT_YET_IMPLEMENTED: ClassVar = [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+    ]
+    POE_MAX_POWER_ALL_PORTS = None  # 180
+    POE_MAX_POWER_SINGLE_PORT = None  # 30
+    POE_SCHEDULING = False  # True
     CHECKS_AND_RESULTS: ClassVar = [
         ("check_login_form_rand", [True]),
         ("check_login_title_tag", ["GS316EP"]),
@@ -168,6 +210,41 @@ class GS316EP(GS3xxSeries):
         "key": "LoginPassword",
     }
     ALLOWED_COOKIE_TYPES: ClassVar = ["gambitCookie"]
+    SWITCH_INFO_TEMPLATES: ClassVar = [
+        {
+            "method": "get",
+            "url": "http://{ip}/iss/specific/dashboard.html",
+            "params": {"Gambit": "cookie_value"},
+        }
+    ]
+    PORT_STATISTICS_TEMPLATES: ClassVar = [
+        {
+            "method": "get",
+            "url": "http://{ip}/iss/specific/interface_stats.html",
+            "params": {"Gambit": "cookie_value"},
+        }
+    ]
+    POE_PORT_CONFIG_TEMPLATES: ClassVar = [
+        {
+            "method": "get",
+            "url": "http://{ip}/iss/specific/poePortConf.html",
+            "params": {"Gambit": "cookie_value"},
+        }
+    ]
+    SWITCH_POE_PORT_TEMPLATES: ClassVar = [
+        {
+            "method": "get",
+            "url": "http://{ip}/iss/specific/poePortConf.html",
+            "params": {"Gambit": "cookie_value"},
+        }
+    ]
+    POE_PORT_STATUS_TEMPLATES: ClassVar = [
+        {
+            "method": "get",
+            "url": "http://{ip}/iss/specific/poePortStatus.html",
+            "params": {"Gambit": "cookie_value", "GetData": "TRUE"},
+        }
+    ]
 
 
 class GS316EPP(GS316EP):

@@ -15,6 +15,8 @@ from . import models, netgear_crypt
 __version__ = "0.2.1"
 
 SWITCH_STATES = ["on", "off"]
+DEFAULT_PAGE = "index.htm"
+TRUE = "TRUE"
 
 API_V2_CHECKS = {
     "bootloader": ["V1.00.03", "V2.06.01", "V2.06.02", "V2.06.03"],
@@ -132,7 +134,7 @@ class NetgearSwitchConnector:
                     timeout=self.LOGIN_URL_REQUEST_TIMEOUT,
                 )
             else:
-                page_name = url.split("/")[-1]
+                page_name = url.split("/")[-1] or DEFAULT_PAGE
                 with Path(f"{self.offline_path_prefix}/{page_name}").open() as file:
                     response.content = file.read().encode("utf-8")
 
@@ -347,46 +349,40 @@ Response from switch: "%s"',
         if not self.cookie_name or not self.cookie_content:
             success = self.get_login_cookie()
             if not success:
-                return requests.Response()
+                raise LoginFailedError
         if timeout == 0:
             timeout = self.LOGIN_URL_REQUEST_TIMEOUT
         jar = requests.cookies.RequestsCookieJar()
         if self.cookie_name and self.cookie_content:
             jar.set(self.cookie_name, self.cookie_content, domain=self.host, path="/")
-        request_func = requests.post if method == "post" else requests.get
         _LOGGER.debug(
             "[NetgearSwitchConnector._request] calling requests.%s for url=%s",
             method,
             url,
         )
         response = requests.Response()
+        data_key = "data" if method == "post" else "params"
+        kwargs = {
+            data_key: data,
+            "cookies": jar,
+            "timeout": timeout,
+            "allow_redirects": allow_redirects,
+        }
         try:
-            response = request_func(
-                url,
-                data=data,
-                cookies=jar,
-                timeout=timeout,
-                allow_redirects=allow_redirects,
-            )
+            response = requests.request(method, url, **kwargs)  # noqa: S113
         except requests.exceptions.Timeout:
             return response
         # Session expired: refresh login cookie and try again
-        if not self._is_authenticated(response):
+        if response.status_code == requests.codes.ok and not self._is_authenticated(
+            response
+        ):
             if not self.get_login_cookie():
                 return response
             with contextlib.suppress(requests.exceptions.Timeout):
-                response = request_func(
-                    url,
-                    data=data,
-                    cookies=jar,
-                    timeout=timeout,
-                    allow_redirects=allow_redirects,
-                )
+                response = requests.request(method, url, **kwargs)  # noqa: S113
         return response
 
-    def fetch_page(
-        self, templates: list, client_hash: str = ""
-    ) -> requests.Response | BaseResponse:
+    def fetch_page(self, templates: list) -> requests.Response | BaseResponse:
         """Return response for 1st successful request from templates."""
         response = BaseResponse()
         for template in templates:
@@ -394,11 +390,10 @@ Response from switch: "%s"',
             if not self.offline_mode:
                 method = template["method"]
                 data = {}
-                if method == "post" and client_hash != "":
-                    data = {"hash": client_hash}
+                self._set_data_from_template(template, data)
                 response = self._request(method, url, data)
             else:
-                page_name = url.split("/")[-1]
+                page_name = url.split("/")[-1] or DEFAULT_PAGE
                 with Path(f"{self.offline_path_prefix}/{page_name}").open() as file:
                     response.content = file.read().encode("utf-8")  # type: ignore reportAttributeAccessIssue
             if response.status_code == requests.codes.ok:
@@ -407,6 +402,23 @@ Response from switch: "%s"',
             message = f"Failed to load any page of templates: {templates}"
             raise PageNotLoadedError(message)
         return response
+
+    def _set_data_from_template(
+        self, template: dict[str, Any], data: dict[str, Any]
+    ) -> None:
+        """Populate data from template using class variables."""
+        if "params" not in template:
+            return
+        for key, value in template["params"].items():
+            try:
+                data[key] = getattr(self, value)
+            except AttributeError:
+                _LOGGER.warning(
+                    "NetgearSwitchConnector._set_data_from_template: "
+                    "missing attribute %s (class variable %s)",
+                    key,
+                    value,
+                )
 
     def _parse_port_statistics(self, tree) -> tuple:  # noqa: ANN001
         # convert to int
@@ -620,7 +632,7 @@ Response from switch: "%s"',
         time.sleep(self.sleep_time)
 
         response_portstatistics = self.fetch_page(
-            self.switch_model.PORT_STATISTICS_TEMPLATES, client_hash=self._client_hash
+            self.switch_model.PORT_STATISTICS_TEMPLATES
         )
         if not response_portstatistics:
             return switch_data
@@ -916,7 +928,7 @@ Response from switch: "%s"',
             port_status = self._parse_port_status(tree=tree_response_dashboard)
         else:
             response_portstatus = self.fetch_page(
-                self.switch_model.PORT_STATUS_TEMPLATES, client_hash=self._client_hash
+                self.switch_model.PORT_STATUS_TEMPLATES
             )
             tree_portstatus = html.fromstring(response_portstatus.content)
             port_status = self._parse_port_status(tree=tree_portstatus)
@@ -955,20 +967,25 @@ Response from switch: "%s"',
         if state not in SWITCH_STATES:
             return False
         if poe_port in self.poe_ports:
-            for template in self.switch_model.POE_PORT_CONFIG_TEMPLATES:
+            for template in self.switch_model.SWITCH_POE_PORT_TEMPLATES:
                 url = template["url"].format(ip=self.host)
                 data = {
-                    "hash": self._client_hash,
                     "ACTION": "Apply",
                     "portID": poe_port - 1,
                     "ADMIN_MODE": 1 if state == "on" else 0,
                 }
+                self._set_data_from_template(template, data)
+                _LOGGER.debug("switch_poe_port data=%s", data)
                 resp = self._request("post", url, data=data)
-                if resp.status_code == requests.codes.ok:
-                    self._loaded_switch_infos[f"port_{poe_port}_poe_power_active"] = (
-                        state
-                    )
+                if (
+                    resp.status_code == requests.codes.ok
+                    and str(resp.content.strip()) == "b'SUCCESS'"
+                ):
                     return True
+                _LOGGER.warning(
+                    "NetgearSwitchConnector.switch_poe_port response was %s",
+                    resp.content.strip(),
+                )
         return False
 
     def turn_on_poe_port(self, poe_port: int) -> bool:
@@ -982,14 +999,14 @@ Response from switch: "%s"',
     def power_cycle_poe_port(self, poe_port: int) -> bool:
         """Cycle the power of a PoE port."""
         if poe_port in self.poe_ports:
-            for template in self.switch_model.POE_PORT_CONFIG_TEMPLATES:
+            for template in self.switch_model.CYCLE_POE_PORT_TEMPLATES:
                 url = template["url"].format(ip=self.host)
                 data = {
-                    "hash": self._client_hash,
                     "ACTION": "Reset",
                     "port" + str(poe_port - 1): "checked",
                 }
-                resp = self._request("post", url, data=data)
+                self._set_data_from_template(template, data)
+                resp = self._request(template["method"], url, data=data)
                 if (
                     resp.status_code == requests.codes.ok
                     and str(resp.content.strip()) == "b'SUCCESS'"
@@ -1011,20 +1028,22 @@ Response from switch: "%s"',
         login_template["method"] = "get"
         for template in [
             login_template,
+            *self.switch_model.AUTODETECT_TEMPLATES,
             *self.switch_model.SWITCH_INFO_TEMPLATES,
             *self.switch_model.PORT_STATISTICS_TEMPLATES,
             *self.switch_model.POE_PORT_CONFIG_TEMPLATES,
             *self.switch_model.POE_PORT_STATUS_TEMPLATES,
         ]:
             url = template["url"].format(ip=self.host)
-            response = self.fetch_page(
-                [template],
-                client_hash=self._client_hash,
-            )
+            try:
+                response = self.fetch_page([template])
+            except PageNotLoadedError:
+                _LOGGER.warning("NetgearSwitchConnector.save_pages failed for %s", url)
+                continue
             if response.status_code == requests.codes.ok and self._is_authenticated(
                 response
             ):
-                page_name = url.split("/")[-1]
+                page_name = url.split("/")[-1] or DEFAULT_PAGE
                 with Path(f"{path_prefix}/{page_name}").open("wb") as file:
                     file.write(response.content)
             else:

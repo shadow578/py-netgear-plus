@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 from py_netgear_plus import (
+    DEFAULT_PAGE,
     NetgearSwitchConnector,
     _from_bytes_to_megabytes,
     requests,
@@ -142,7 +143,7 @@ class PageFetcher:
         """Get the path to a page."""
         for template in templates:
             url = template["url"]
-            page_name = url.split("/")[-1]
+            page_name = url.split("/")[-1] or DEFAULT_PAGE
             path = Path(f"pages/{self.switch_model.MODEL_NAME}/{page_name}")
             if path.exists():
                 return path
