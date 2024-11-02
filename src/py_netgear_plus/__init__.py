@@ -12,7 +12,7 @@ from lxml import html
 
 from . import models, netgear_crypt
 
-__version__ = "0.2.5"
+__version__ = "0.2.6"
 
 SWITCH_STATES = ["on", "off"]
 DEFAULT_PAGE = "index.htm"
@@ -99,7 +99,6 @@ class NetgearSwitchConnector:
         self.cookie_name = None
         self.cookie_content = None
         self._client_hash = ""
-        self._gambit = ""
 
         # previous data calculation
         self._previous_timestamp = time.perf_counter()
@@ -299,8 +298,6 @@ try NetgearSwitchConnector.autodetect_model"
             if cookie:
                 self.cookie_name = ct
                 self.cookie_content = cookie
-                if ct == "gambitCookie":
-                    self._gambit = cookie
                 return True
         tree = html.fromstring(response.content)
 

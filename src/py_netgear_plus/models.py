@@ -214,35 +214,35 @@ class GS316EP(GS3xxSeries):
         {
             "method": "get",
             "url": "http://{ip}/iss/specific/dashboard.html",
-            "params": {"Gambit": "cookie_value"},
+            "params": {"Gambit": "cookie_content"},
         }
     ]
     PORT_STATISTICS_TEMPLATES: ClassVar = [
         {
             "method": "get",
             "url": "http://{ip}/iss/specific/interface_stats.html",
-            "params": {"Gambit": "cookie_value"},
+            "params": {"Gambit": "cookie_content"},
         }
     ]
     POE_PORT_CONFIG_TEMPLATES: ClassVar = [
         {
             "method": "get",
             "url": "http://{ip}/iss/specific/poePortConf.html",
-            "params": {"Gambit": "cookie_value"},
+            "params": {"Gambit": "cookie_content"},
         }
     ]
     SWITCH_POE_PORT_TEMPLATES: ClassVar = [
         {
             "method": "get",
             "url": "http://{ip}/iss/specific/poePortConf.html",
-            "params": {"Gambit": "cookie_value"},
+            "params": {"Gambit": "cookie_content"},
         }
     ]
     POE_PORT_STATUS_TEMPLATES: ClassVar = [
         {
             "method": "get",
             "url": "http://{ip}/iss/specific/poePortStatus.html",
-            "params": {"Gambit": "cookie_value", "GetData": "TRUE"},
+            "params": {"Gambit": "cookie_content", "GetData": "TRUE"},
         }
     ]
 
