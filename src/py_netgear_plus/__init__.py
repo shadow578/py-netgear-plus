@@ -194,6 +194,8 @@ passed_checks_by_model=%s matched_models=%s",
             "traffic_rx": [0] * self.ports,
             "crc_errors": [0] * self.ports,
             "speed_io": [0] * self.ports,
+            "sum_rx": [0] * self.ports,
+            "sum_tx": [0] * self.ports,
         }
 
     def check_login_url(self) -> bool:
