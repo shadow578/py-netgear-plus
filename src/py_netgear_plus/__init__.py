@@ -107,6 +107,12 @@ class NetgearSwitchConnector:
         # current data
         self._loaded_switch_infos = {}
 
+        _LOGGER.debug(
+            "[NetgearSwitchConnector] instance (v%s) created for IP=%s",
+            __version__,
+            self.host,
+        )
+
     def turn_on_offline_mode(self, path_prefix: str) -> None:
         """Turn on offline mode."""
         self.offline_mode = True
