@@ -12,11 +12,10 @@ from lxml import html
 
 from . import models, netgear_crypt
 
-__version__ = "0.2.4"
+__version__ = "0.2.5"
 
 SWITCH_STATES = ["on", "off"]
 DEFAULT_PAGE = "index.htm"
-TRUE = "TRUE"
 
 API_V2_CHECKS = {
     "bootloader": ["V1.00.03", "V2.06.01", "V2.06.02", "V2.06.03"],
@@ -70,6 +69,7 @@ class NetgearSwitchConnector:
     """Representation of a Netgear Switch."""
 
     LOGIN_URL_REQUEST_TIMEOUT = 15
+    TRUE = "TRUE"
 
     def __init__(self, host: str, password: str) -> None:
         """Initialize Connector Object."""
@@ -99,6 +99,7 @@ class NetgearSwitchConnector:
         self.cookie_name = None
         self.cookie_content = None
         self._client_hash = ""
+        self._gambit = ""
 
         # previous data calculation
         self._previous_timestamp = time.perf_counter()
@@ -298,6 +299,8 @@ try NetgearSwitchConnector.autodetect_model"
             if cookie:
                 self.cookie_name = ct
                 self.cookie_content = cookie
+                if ct == "gambitCookie":
+                    self._gambit = cookie
                 return True
         tree = html.fromstring(response.content)
 
@@ -313,7 +316,7 @@ try NetgearSwitchConnector.autodetect_model"
                 error_msg = error_msg[0].value
         if error_msg is not None:
             _LOGGER.warning(
-                '[ckw_hass_gs108e.get_login_cookie] [IP: %s] \
+                '[NetgearSwitchConnector.get_login_cookie] [IP: %s] \
 Response from switch: "%s"',
                 self.host,
                 error_msg,
