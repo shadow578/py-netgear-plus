@@ -1,5 +1,5 @@
 colorlog==6.9.0
-ruff==0.7.1
+ruff==0.7.2
 hatchling==1.25.0
 build==1.2.2.post1
 pytest==8.3.3
