@@ -11,7 +11,7 @@ from py_netgear_plus import (
     _from_bytes_to_megabytes,
     requests,
 )
-from py_netgear_plus.models import GS308EP, AutodetectedSwitchModel, GS30xSeries
+from py_netgear_plus.models import GS308EP, AutodetectedSwitchModel
 
 
 def test_from_bytes_to_megabytes() -> None:

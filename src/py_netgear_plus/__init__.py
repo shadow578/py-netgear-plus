@@ -1030,10 +1030,13 @@ Response from switch: "%s"',
             try:
                 response = self.fetch_page([template])
             except PageNotLoadedError:
-                _LOGGER.warning("NetgearSwitchConnector.save_pages failed for %s", url)
+                _LOGGER.warning(
+                    "NetgearSwitchConnector.save_pages could not download %s", url
+                )
                 continue
-            if response.status_code == requests.codes.ok and self._is_authenticated(
-                response
+            if response.status_code == requests.codes.ok and (
+                self._is_authenticated(response)
+                or template["url"] == login_template["url"]
             ):
                 page_name = url.split("/")[-1] or DEFAULT_PAGE
                 with Path(f"{path_prefix}/{page_name}").open("wb") as file:

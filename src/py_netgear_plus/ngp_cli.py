@@ -265,9 +265,6 @@ def collect_command(
         if args.verbose:
             print(f"Saving {n[i]} set of pages in {path}", file=stderr)  # noqa: T201
         connector.save_pages(path)
-    if not connector.switch_model.SUPPORTED:
-        print("Switch model not supported, not parsing data.", file=stderr)  # noqa: T201
-        return True
     for i in range(2):
         path = f"{args.path}/{model_name}/{i}"
         if args.verbose:
