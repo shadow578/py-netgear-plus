@@ -117,7 +117,7 @@ class GS108Ev3(AutodetectedSwitchModel):
     ALLOWED_COOKIE_TYPES: ClassVar = ["GS108SID", "SID"]
 
 
-class GS3xxSeries(AutodetectedSwitchModel):
+class GS30xSeries(AutodetectedSwitchModel):
     """Parent class definition for Netgear GS3xx series."""
 
     SWITCH_INFO_TEMPLATES: ClassVar = [
@@ -148,7 +148,7 @@ class GS3xxSeries(AutodetectedSwitchModel):
     ]
 
 
-class GS305EP(GS3xxSeries):
+class GS305EP(GS30xSeries):
     """Definition for Netgear GS305EP model."""
 
     MODEL_NAME = "GS305EP"
@@ -161,7 +161,7 @@ class GS305EP(GS3xxSeries):
     ]
 
 
-class GS308EP(GS3xxSeries):
+class GS308EP(GS30xSeries):
     """Definition for Netgear GS308EP model."""
 
     MODEL_NAME = "GS308EP"
@@ -174,7 +174,7 @@ class GS308EP(GS3xxSeries):
     ]
 
 
-class GS316EP(GS3xxSeries):
+class GS316EP(GS30xSeries):
     """Definition for Netgear GS316EP model."""
 
     SUPPORTED = False

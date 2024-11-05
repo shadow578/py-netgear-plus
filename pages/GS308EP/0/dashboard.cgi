@@ -64,7 +64,7 @@
 <div><span>01:02:03:04:05:06</span></div></div>
 <div class="hid_info_cell col-xs-12 col-sm-6">
 <div class="hid_info_title"><span>ml198</span></div>
-<div><span>9876543210ABC</span></div></div>
+<div><span>1234567890ABC</span></div></div>
 <div class="hid_info_cell col-xs-12 col-sm-6">
 <div class="hid_info_title"><span>ml040</span></div>
 <div><span>GS308EP</span></div></div>
@@ -84,7 +84,7 @@
   </div></div>
 </div>
 </div>
-    <input type=hidden name='hash' id='hash' value="da1b1c28241db030224d88724735bf82">
+    <input type=hidden name='hash' id='hash' value="3483299a0487987b90483a70c5d3d2dd">
 </form>
 <div class= "submit_btn">
 <span class="text-primary"><button name='submitSysinfo' onclick='submitSysInfo()' data-react-toolbox="button" class="toolbox_lib_button button_theme_flat button_theme_primary button_theme_mini button button_mini" disabled=''>

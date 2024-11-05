@@ -11,7 +11,7 @@ from py_netgear_plus import (
     _from_bytes_to_megabytes,
     requests,
 )
-from py_netgear_plus.models import GS308EP, AutodetectedSwitchModel, GS3xxSeries
+from py_netgear_plus.models import GS308EP, AutodetectedSwitchModel, GS30xSeries
 
 
 def test_from_bytes_to_megabytes() -> None:
@@ -43,7 +43,7 @@ def test_netgear_switch_connector_initialization() -> None:
     assert connector.cookie_content is None
     assert connector._client_hash == ""
     assert connector._previous_data == {}
-    assert connector._loaded_switch_infos == {}
+    assert connector._loaded_switch_metadata == {}
 
 
 def test_autodetect_model() -> None:
@@ -51,7 +51,7 @@ def test_autodetect_model() -> None:
     connector = NetgearSwitchConnector(host="192.168.0.1", password="password")
     with patch("py_netgear_plus.requests.request") as mock_request:
         mock_response = Mock()
-        with Path("pages/GS308EP/login.cgi").open() as file:
+        with Path("pages/GS308EP/0/login.cgi").open() as file:
             mock_response.content = file.read()  # type: ignore reportAttributeAccessIssue
         mock_response.status_code = requests.codes.ok
         mock_request.return_value = mock_response
@@ -65,7 +65,7 @@ def test_check_login_url() -> None:
     connector = NetgearSwitchConnector(host="192.168.0.1", password="password")
     with patch("py_netgear_plus.requests.get") as mock_get:
         mock_response = Mock()
-        with Path("pages/GS308EP/login.cgi").open() as file:
+        with Path("pages/GS308EP/0/login.cgi").open() as file:
             mock_response.content = file.read()  # type: ignore reportAttributeAccessIssue
         mock_response.status_code = requests.codes.ok
         mock_get.return_value = mock_response
@@ -77,7 +77,7 @@ def test_check_login_form_rand() -> None:
     """Test check_login_form_rand method."""
     connector = NetgearSwitchConnector(host="192.168.0.1", password="password")
     connector._login_page_response = Mock()
-    with Path("pages/GS308EP/login.cgi").open() as file:
+    with Path("pages/GS308EP/0/login.cgi").open() as file:
         connector._login_page_response.content = file.read()  # type: ignore reportAttributeAccessIssue
     connector._login_page_response.status_code = requests.codes.ok
     assert connector.check_login_form_rand() is True
@@ -96,7 +96,7 @@ def test_get_login_password() -> None:
     connector = NetgearSwitchConnector(host="192.168.0.1", password="password")
     with patch("py_netgear_plus.requests.get") as mock_get:
         mock_response = Mock()
-        with Path("pages/GS308EP/login.cgi").open() as file:
+        with Path("pages/GS308EP/0/login.cgi").open() as file:
             mock_response.content = file.read()  # type: ignore reportAttributeAccessIssue
         mock_response.status_code = requests.codes.ok
         mock_get.return_value = mock_response
@@ -127,6 +127,12 @@ class PageFetcher:
     def __init__(self, switch_model: AutodetectedSwitchModel) -> None:
         """Initialize the PageFetcher."""
         self.switch_model = switch_model
+        self._sequence = 0
+
+    def next_sequence(self) -> int:
+        """Get the next sequence number."""
+        self._sequence += 1
+        return self._sequence
 
     def from_file(
         self,
@@ -144,7 +150,9 @@ class PageFetcher:
         for template in templates:
             url = template["url"]
             page_name = url.split("/")[-1] or DEFAULT_PAGE
-            path = Path(f"pages/{self.switch_model.MODEL_NAME}/{page_name}")
+            path = Path(
+                f"pages/{self.switch_model.MODEL_NAME}/{self._sequence}/{page_name}"
+            )
             if path.exists():
                 return path
         raise FileNotFoundError
@@ -169,15 +177,19 @@ def test_get_switch_infos() -> None:
             mock_response.status_code = requests.codes.ok
             mock_request.return_value = mock_response
             connector.autodetect_model()
-        assert isinstance(connector.switch_model, GS3xxSeries)
+        assert isinstance(connector.switch_model, switch_model.__class__)
         connector._login_page_response = Mock()
         with page_fetcher.get_path([switch_model.LOGIN_TEMPLATE]).open() as file:
             connector._login_page_response.content = file.read()  # type: ignore reportAttributeAccessIssue
-        connector._login_page_response.status_code = requests.codes.ok
-        switch_data = connector.get_switch_infos()
-        with Path(f"pages/{switch_model.MODEL_NAME}/switch_infos.json").open() as file:
-            validation_data = json.loads(file.read())
-            assert switch_data == validation_data
+        for sequence in range(2):
+            connector._login_page_response.status_code = requests.codes.ok
+            switch_data = connector.get_switch_infos()
+            with Path(
+                f"pages/{switch_model.MODEL_NAME}/{sequence}/switch_infos.json"
+            ).open() as file:
+                validation_data = json.loads(file.read())
+                assert switch_data == validation_data
+            page_fetcher.next_sequence()
 
 
 if __name__ == "__main__":

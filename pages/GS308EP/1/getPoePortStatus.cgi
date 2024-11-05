@@ -35,7 +35,7 @@
 <span class='hid-txt wid-full'>ml572</span>
 </div>
 <div>
-<span>124</span>
+<span>119</span>
 </div>
 </div>
 <div class="hid_info_cell col-xs-12 col-sm-6">
@@ -43,7 +43,7 @@
 <span class='hid-txt wid-full'>ml574</span>
 </div>
 <div>
-<span>6.4</span>
+<span>6.1</span>
 </div>
 </div>
 <div class="hid_info_cell col-xs-12 col-sm-6">
@@ -92,7 +92,7 @@
 <span class='hid-txt wid-full'>ml572</span>
 </div>
 <div>
-<span>107</span>
+<span>109</span>
 </div>
 </div>
 <div class="hid_info_cell col-xs-12 col-sm-6">
@@ -100,7 +100,7 @@
 <span class='hid-txt wid-full'>ml574</span>
 </div>
 <div>
-<span>5.5</span>
+<span>5.6</span>
 </div>
 </div>
 <div class="hid_info_cell col-xs-12 col-sm-6">
@@ -198,7 +198,7 @@
 <span class='hid-txt wid-full'>ml570</span>
 </div>
 <div>
-<span>50</span>
+<span>51</span>
 </div>
 </div>
 <div class="hid_info_cell col-xs-12 col-sm-6">
@@ -206,7 +206,7 @@
 <span class='hid-txt wid-full'>ml572</span>
 </div>
 <div>
-<span>44</span>
+<span>41</span>
 </div>
 </div>
 <div class="hid_info_cell col-xs-12 col-sm-6">
@@ -214,7 +214,7 @@
 <span class='hid-txt wid-full'>ml574</span>
 </div>
 <div>
-<span>2.2</span>
+<span>2.1</span>
 </div>
 </div>
 <div class="hid_info_cell col-xs-12 col-sm-6">

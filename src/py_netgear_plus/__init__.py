@@ -11,8 +11,9 @@ import requests.cookies
 from lxml import html
 
 from . import models, netgear_crypt
+from .parsers import create_page_parser
 
-__version__ = "0.2.6"
+__version__ = "0.2.7"
 
 SWITCH_STATES = ["on", "off"]
 DEFAULT_PAGE = "index.htm"
@@ -56,7 +57,7 @@ class BaseResponse:
 
     def __init__(self) -> None:
         """Initialize BaseResponse Object."""
-        self.status_code = requests.codes.ok
+        self.status_code = requests.codes.not_found
         self.content = b""
         self.cookies = requests.cookies.RequestsCookieJar()
 
@@ -105,7 +106,7 @@ class NetgearSwitchConnector:
         self._previous_data = {}
 
         # current data
-        self._loaded_switch_infos = {}
+        self._loaded_switch_metadata = {}
 
         _LOGGER.debug(
             "[NetgearSwitchConnector] instance (v%s) created for IP=%s",
@@ -141,52 +142,55 @@ class NetgearSwitchConnector:
                 )
             else:
                 page_name = url.split("/")[-1] or DEFAULT_PAGE
-                with Path(f"{self.offline_path_prefix}/{page_name}").open() as file:
-                    response.content = file.read().encode("utf-8")
+                path = Path(f"{self.offline_path_prefix}/{page_name}")
+                if path.exists():
+                    with path.open() as file:
+                        response.content = file.read().encode("utf-8")
+                        response.status_code = requests.codes.ok
 
             if response and response.status_code == requests.codes.ok:
                 self._login_page_response = response
-            else:
-                continue
+                passed_checks_by_model = {}
+                matched_models = []
+                for mdl_cls in models.MODELS:
+                    mdl = mdl_cls()
+                    mdl_name = mdl.MODEL_NAME
+                    passed_checks_by_model[mdl_name] = {}
+                    autodetect_funcs = mdl.get_autodetect_funcs()
+                    for func_name, expected_results in autodetect_funcs:
+                        func_result = getattr(self, func_name)()
+                        check_successful = func_result in expected_results
+                        passed_checks_by_model[mdl_name][func_name] = check_successful
 
-            passed_checks_by_model = {}
-            matched_models = []
-            for mdl_cls in models.MODELS:
-                mdl = mdl_cls()
-                mdl_name = mdl.MODEL_NAME
-                passed_checks_by_model[mdl_name] = {}
-                autodetect_funcs = mdl.get_autodetect_funcs()
-                for func_name, expected_results in autodetect_funcs:
-                    func_result = getattr(self, func_name)()
-                    check_successful = func_result in expected_results
-                    passed_checks_by_model[mdl_name][func_name] = check_successful
+                        # check_login_switchinfo_tag beats them all
+                        if (
+                            func_name == "check_login_switchinfo_tag"
+                            and check_successful
+                        ):
+                            matched_models.append(mdl)
 
-                    # check_login_switchinfo_tag beats them all
-                    if func_name == "check_login_switchinfo_tag" and check_successful:
+                    values_for_current_mdl = passed_checks_by_model[mdl_name].values()
+                    if all(values_for_current_mdl) and mdl not in matched_models:
                         matched_models.append(mdl)
 
-                values_for_current_mdl = passed_checks_by_model[mdl_name].values()
-                if all(values_for_current_mdl) and mdl not in matched_models:
-                    matched_models.append(mdl)
-
-            _LOGGER.debug(
-                "[NetgearSwitchConnector.autodetect_model] \
-passed_checks_by_model=%s matched_models=%s",
-                passed_checks_by_model,
-                matched_models,
-            )
-
-            if len(matched_models) == 1:
-                # set local settings
-                self._set_instance_attributes_by_model(matched_models[0])
-                _LOGGER.info(
-                    "[NetgearSwitchConnector.autodetect_model] found %s instance.",
-                    matched_models[0],
+                _LOGGER.debug(
+                    "[NetgearSwitchConnector.autodetect_model] \
+    passed_checks_by_model=%s matched_models=%s",
+                    passed_checks_by_model,
+                    matched_models,
                 )
-                if self.switch_model:
-                    return self.switch_model
-            if len(matched_models) > 1:
-                raise MultipleModelsDetectedError(str(matched_models))
+
+                if len(matched_models) == 1:
+                    # set local settings
+                    self._set_instance_attributes_by_model(matched_models[0])
+                    _LOGGER.info(
+                        "[NetgearSwitchConnector.autodetect_model] found %s instance.",
+                        matched_models[0],
+                    )
+                    if self.switch_model:
+                        return self.switch_model
+                if len(matched_models) > 1:
+                    raise MultipleModelsDetectedError(str(matched_models))
         raise SwitchModelNotDetectedError
 
     def _set_instance_attributes_by_model(
@@ -309,7 +313,7 @@ try NetgearSwitchConnector.autodetect_model"
 
         # Handling Error Messages
         error_msg = None
-        if isinstance(self.switch_model, (models.GS3xxSeries)):
+        if isinstance(self.switch_model, (models.GS30xSeries)):
             error_msg = tree.xpath('//div[@class="pwdErrStyle"]')
             if error_msg:
                 error_msg = error_msg[0].text
@@ -330,9 +334,14 @@ Response from switch: "%s"',
         """Check for redirect to login when not authenticated (anymore)."""
         if "content" in dir(response):
             title = html.fromstring(response.content).xpath("//title")
-            if len(title) == 0 or title[0].text.lower() != "redirect to login":
-                return True
-        return False
+            if len(title) and title[0].text.lower() != "redirect to login":
+                return False
+            script = html.fromstring(response.content).xpath(
+                '//script[contains(text(),"/wmi/login")]'
+            )
+            if len(script) and 'top.location.href = "/wmi/login' in script[0].text:
+                return False
+        return True
 
     def delete_login_cookie(self) -> bool:
         """Logout and delete cookie."""
@@ -403,8 +412,11 @@ Response from switch: "%s"',
                 response = self._request(method, url, data)
             else:
                 page_name = url.split("/")[-1] or DEFAULT_PAGE
-                with Path(f"{self.offline_path_prefix}/{page_name}").open() as file:
-                    response.content = file.read().encode("utf-8")  # type: ignore reportAttributeAccessIssue
+                path = Path(f"{self.offline_path_prefix}/{page_name}")
+                if path.exists():
+                    with path.open() as file:
+                        response.content = file.read().encode("utf-8")  # type: ignore reportAttributeAccessIssue
+                        response.status_code = requests.codes.ok
             if response.status_code == requests.codes.ok:
                 break
         if response.status_code != requests.codes.ok:
@@ -454,7 +466,7 @@ Response from switch: "%s"',
             int32 = 4294967296
             return int(input_1, base) * int32 + int(input_2, base)
 
-        if isinstance(self.switch_model, models.GS3xxSeries):
+        if isinstance(self.switch_model, models.GS30xSeries):
             rx = []
             tx = []
             crc = []
@@ -481,7 +493,7 @@ Response from switch: "%s"',
         else:
             match_bootloader = self._switch_bootloader in API_V2_CHECKS["bootloader"]
             match_firmware = (
-                self._loaded_switch_infos.get("switch_firmware", "")
+                self._loaded_switch_metadata.get("switch_firmware", "")
                 in API_V2_CHECKS["firmware"]
             )
 
@@ -521,7 +533,7 @@ Response from switch: "%s"',
     def _parse_port_status(self, tree) -> dict:  # noqa: ANN001
         status_by_port = {}
 
-        if isinstance(self.switch_model, (models.GS3xxSeries)):
+        if isinstance(self.switch_model, (models.GS30xSeries)):
             for port0 in range(self.ports):
                 port_nr = port0 + 1
                 xtree_port = tree.xpath(f'//div[@name="isShowPot{port_nr}"]')[0]
@@ -548,7 +560,7 @@ Response from switch: "%s"',
         else:
             match_bootloader = self._switch_bootloader in API_V2_CHECKS["bootloader"]
             match_firmware = (
-                self._loaded_switch_infos.get("switch_firmware", "")
+                self._loaded_switch_metadata.get("switch_firmware", "")
                 in API_V2_CHECKS["firmware"]
             )
 
@@ -632,10 +644,13 @@ Response from switch: "%s"',
         current_data = {}
         switch_data = {}
 
-        if not self._loaded_switch_infos:
-            self._load_switch_infos()
+        if not self._loaded_switch_metadata:
+            self._load_switch_metadata()
 
-        switch_data.update(**self._loaded_switch_infos)
+        switch_data.update(**self._loaded_switch_metadata)
+
+        if not self.switch_model.SUPPORTED:
+            return switch_data
 
         # Hold fire
         time.sleep(self.sleep_time)
@@ -678,7 +693,7 @@ Response from switch: "%s"',
 
         switch_data.update(self._updated_switch_data(current_data))
 
-        if isinstance(self.switch_model, (models.GS3xxSeries)):
+        if isinstance(self.switch_model, (models.GS30xSeries)):
             time.sleep(self.sleep_time)
             switch_data.update(self._get_poe_port_status())
 
@@ -688,52 +703,20 @@ Response from switch: "%s"',
 
         return switch_data
 
-    def _load_switch_infos(self) -> None:
+    def _load_switch_metadata(self) -> None:
         if not self.switch_model:
             self.autodetect_model()
         page = self.fetch_page(self.switch_model.SWITCH_INFO_TEMPLATES)
-        if not page:
+        if not page.content:
             return
-        tree = html.fromstring(page.content)
+        parser = create_page_parser(self.switch_model.MODEL_NAME)
 
-        if isinstance(self.switch_model, (models.GS3xxSeries)):
-            switch_serial_number = self._get_gs3xx_switch_info(tree=tree, text="ml198")
-            switch_name = tree.xpath('//div[@id="switch_name"]')[0].text
-            switch_firmware = self._get_gs3xx_switch_info(tree=tree, text="ml089")
-
-        else:
-            # switch_info.htm:
-            switch_serial_number = "unknown"
-
-            switch_name = tree.xpath('//input[@id="switch_name"]')[0].value
-
-            # Detect Firmware
-            switch_firmware = tree.xpath('//table[@id="tbl1"]/tr[6]/td[2]')[0].text
-            if switch_firmware is None:
-                # Fallback older versions
-                switch_firmware = tree.xpath('//table[@id="tbl1"]/tr[4]/td[2]')[0].text
-
-            switch_bootloader_x = tree.xpath('//td[@id="loader"]')
-            switch_serial_number_x = tree.xpath('//table[@id="tbl1"]/tr[3]/td[2]')
-            client_hash_x = tree.xpath('//input[@id="hash"]')
-
-            if switch_bootloader_x:
-                self._switch_bootloader = switch_bootloader_x[0].text
-            if switch_serial_number_x:
-                switch_serial_number = switch_serial_number_x[0].text
-
-        client_hash_x = tree.xpath('//input[@id="hash"]')
-        if client_hash_x:
-            self._client_hash = client_hash_x[0].value
+        self._client_hash = parser.parse_client_hash(page)
 
         # Avoid a second call on next get_switch_infos() call
-        self._loaded_switch_infos = {
-            "switch_ip": self.host,
-            "switch_name": switch_name,
-            "switch_bootloader": self._switch_bootloader,
-            "switch_firmware": switch_firmware,
-            "switch_serial_number": switch_serial_number,
-        }
+        self._loaded_switch_metadata = {
+            "switch_ip": self.host
+        } | parser.parse_switch_info(page)
 
     def _initialize_current_data(self) -> dict:
         """Initialize current data dictionary with default values."""
@@ -929,7 +912,7 @@ Response from switch: "%s"',
 
     def _get_port_status(self) -> dict:
         switch_data = {}
-        if isinstance(self.switch_model, (models.GS3xxSeries)):
+        if isinstance(self.switch_model, (models.GS30xSeries)):
             response_dashboard = self.fetch_page(
                 self.switch_model.SWITCH_INFO_TEMPLATES
             )
