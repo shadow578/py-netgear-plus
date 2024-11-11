@@ -101,11 +101,27 @@ class PageParser:
         tree = html.fromstring(page.content)
         return get_first_value(tree, '//input[@name="hash"]')
 
-    def parse_port_statistics(self, page: requests.Response) -> dict[str, Any]:
-        """Parse port statistics from the html page."""
+    def parse_port_status(self, page: requests.Response) -> dict[str, Any]:
+        """Parse port status from the html page."""
         raise NotImplementedError
 
-    def parse_port_status(self, page: requests.Response) -> dict[str, Any]:
+    def parse_port_statistics(self, page: requests.Response) -> dict[str, Any]:
+        """Parse port statistics from the html page."""
+        if not self._switch_firmware or not self._switch_bootloader:
+            error_message = "Firmware or bootloader vresion not set."
+            raise NetgearPlusPageParserError(error_message)
+        if (
+            self._switch_firmware in API_V2_CHECKS["firmware"]
+            and self._switch_bootloader in API_V2_CHECKS["bootloader"]
+        ):
+            return self.parse_port_statistics_v2(page)
+        return self.parse_port_statistics_v1(page)
+
+    def parse_port_statistics_v1(self, page: requests.Response) -> dict[str, Any]:
+        """Parse port status from the html page."""
+        raise NotImplementedError
+
+    def parse_port_statistics_v2(self, page: requests.Response) -> dict[str, Any]:
         """Parse port status from the html page."""
         raise NotImplementedError
 

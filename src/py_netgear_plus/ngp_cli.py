@@ -30,6 +30,9 @@ from py_netgear_plus import (
     NetgearSwitchConnector,
     SwitchModelNotDetectedError,
 )
+from py_netgear_plus import (
+    __version__ as ngp_version,
+)
 
 COOKIE_FILE = Path.home() / ".netgear_plus_cookie"
 
@@ -122,6 +125,7 @@ def main() -> None:
     subparsers.add_parser("parse", help="Parse pages and save data to file")
     subparsers.add_parser("save", help="Save pages to file")
     subparsers.add_parser("status", help="Display switch status")
+    subparsers.add_parser("version", help="Display cli version")
 
     args = parser.parse_args()
 
@@ -129,7 +133,7 @@ def main() -> None:
         logging.basicConfig(level=logging.DEBUG)
         print("Enabling debug mode.", file=stderr)  # noqa: T201
 
-    if not args.password and args.command not in ["identify", "logout"]:
+    if not args.password and args.command not in ["identify", "logout", "version"]:
         print(  # noqa: T201
             "Password is required. Use --password or set"
             " NETGEAR_PLUS_PASSWORD environment variable.",
@@ -151,6 +155,7 @@ def main() -> None:
         "parse": parse_command,
         "save": save_command,
         "status": status_command,
+        "version": version_command,
     }
 
     if args.command in command_functions:
@@ -190,7 +195,8 @@ def logout_command(connector: NetgearSwitchConnector, args: argparse.Namespace) 
         print("Not logged in.", file=stderr)  # noqa: T201
         return False
     connector.autodetect_model()
-    if connector.delete_login_cookie() and Path(COOKIE_FILE).unlink():
+    Path(COOKIE_FILE).unlink()
+    if connector.delete_login_cookie():
         return True
     print("Logout failed.", file=stderr)  # noqa: T201
     return False
@@ -273,6 +279,15 @@ def collect_command(
         switch_infos = connector.get_switch_infos()
         switch_infos["switch_ip"] = "192.168.0.1"
         save_switch_infos(path, switch_infos)
+    return True
+
+
+def version_command(
+    connector: NetgearSwitchConnector,  # noqa: ARG001
+    args: argparse.Namespace,  # noqa: ARG001
+) -> bool:
+    """Display cli version."""
+    print(f"Netgear Plus CLI version: {ngp_version}")  # noqa: T201
     return True
 
 

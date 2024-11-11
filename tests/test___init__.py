@@ -11,120 +11,29 @@ from py_netgear_plus import (
     _from_bytes_to_megabytes,
     requests,
 )
-from py_netgear_plus.models import GS308EP, AutodetectedSwitchModel
+from py_netgear_plus.models import GS308EP, GS316EPP, AutodetectedSwitchModel, GS108Ev3
+from py_netgear_plus.netgear_crypt import make_md5, merge
 
+# List of models with saved pages and extracted rand values
+FULLY_TESTED_MODELS = {
+    GS108Ev3: "1763184457",
+    GS308EP: "990464497",
+    GS316EPP: "1127757600",
+}
+PARTIALLY_TESTED_MODELS = [
+    pytest.param(GS108Ev3, marks=pytest.mark.xfail(reason="no valid data pages")),
+    GS308EP,
+    GS316EPP,
+]
 
-def test_from_bytes_to_megabytes() -> None:
-    """Test cases for _from_bytes_to_megabytes function."""
-    assert _from_bytes_to_megabytes(1000000) == 1.00
-    assert _from_bytes_to_megabytes(5000000) == 5.00
-    assert _from_bytes_to_megabytes(123456789) == 123.46
-    assert _from_bytes_to_megabytes(0) == 0.00
-    assert _from_bytes_to_megabytes(-1000000) == -1.00
-
-
-"""Unit tests for the py_netgear_plus __init__ module."""
-
-
-def test_netgear_switch_connector_initialization() -> None:
-    """Test initialization of NetgearSwitchConnector."""
-    connector = NetgearSwitchConnector(host="192.168.0.1", password="password")
-    assert connector.host == "192.168.0.1"
-    assert connector._password == "password"
-    assert connector.switch_model is not None
-    assert connector.ports == 0
-    assert connector.poe_ports == []
-    assert connector.port_status == {}
-    assert connector._switch_bootloader == "unknown"
-    assert connector.sleep_time == 0.25
-    assert connector._login_page_response is not None
-    assert connector._login_page_form_password == ""
-    assert connector.cookie_name is None
-    assert connector.cookie_content is None
-    assert connector._client_hash == ""
-    assert connector._previous_data == {}
-    assert connector._loaded_switch_metadata == {}
-
-
-def test_autodetect_model() -> None:
-    """Test autodetect_model method."""
-    connector = NetgearSwitchConnector(host="192.168.0.1", password="password")
-    with patch("py_netgear_plus.requests.request") as mock_request:
-        mock_response = Mock()
-        with Path("pages/GS308EP/0/login.cgi").open() as file:
-            mock_response.content = file.read()  # type: ignore reportAttributeAccessIssue
-        mock_response.status_code = requests.codes.ok
-        mock_request.return_value = mock_response
-        connector.autodetect_model()
-        assert connector._login_page_response == mock_response
-        assert isinstance(connector.switch_model, GS308EP)
-
-
-def test_check_login_url() -> None:
-    """Test check_login_url method."""
-    connector = NetgearSwitchConnector(host="192.168.0.1", password="password")
-    with patch("py_netgear_plus.requests.get") as mock_get:
-        mock_response = Mock()
-        with Path("pages/GS308EP/0/login.cgi").open() as file:
-            mock_response.content = file.read()  # type: ignore reportAttributeAccessIssue
-        mock_response.status_code = requests.codes.ok
-        mock_get.return_value = mock_response
-        assert connector.check_login_url() is True
-        assert connector._login_page_response == mock_response
-
-
-def test_check_login_form_rand() -> None:
-    """Test check_login_form_rand method."""
-    connector = NetgearSwitchConnector(host="192.168.0.1", password="password")
-    connector._login_page_response = Mock()
-    with Path("pages/GS308EP/0/login.cgi").open() as file:
-        connector._login_page_response.content = file.read()  # type: ignore reportAttributeAccessIssue
-    connector._login_page_response.status_code = requests.codes.ok
-    assert connector.check_login_form_rand() is True
-    assert connector._login_page_form_password == "53765442b8360ee03c5fd72ff02deced"
-
-
-def test_get_unique_id() -> None:
-    """Test get_unique_id method."""
-    connector = NetgearSwitchConnector(host="192.168.0.1", password="password")
-    connector.switch_model.MODEL_NAME = "TestModel"  # type: ignore reportAttributeAccessIssue
-    assert connector.get_unique_id() == "testmodel_192_168_0_1"
-
-
-def test_get_login_password() -> None:
-    """Test get_login_password method."""
-    connector = NetgearSwitchConnector(host="192.168.0.1", password="password")
-    with patch("py_netgear_plus.requests.get") as mock_get:
-        mock_response = Mock()
-        with Path("pages/GS308EP/0/login.cgi").open() as file:
-            mock_response.content = file.read()  # type: ignore reportAttributeAccessIssue
-        mock_response.status_code = requests.codes.ok
-        mock_get.return_value = mock_response
-        connector._login_page_response = mock_response
-        assert connector.get_login_password() == "53765442b8360ee03c5fd72ff02deced"
-
-
-def test_get_login_cookie() -> None:
-    """Test get_login_cookie method."""
-    connector = NetgearSwitchConnector(host="192.168.0.1", password="password")
-    connector.switch_model = GS308EP  # type: ignore reportAttributeAccessIssue
-    with (
-        patch.object(connector, "get_login_password", return_value="password"),
-        patch("py_netgear_plus.requests.request") as mock_request,
-    ):
-        mock_response = Mock()
-        mock_response.status_code = requests.codes.ok
-        mock_response.cookies.get.return_value = "cookie_value"
-        mock_request.return_value = mock_response
-        assert connector.get_login_cookie() is True
-        assert connector.cookie_name is not None
-        assert connector.cookie_content == "cookie_value"
+TEST_MODELS = list(FULLY_TESTED_MODELS.keys())
+TEST_MODELS_WITH_RAND = list(FULLY_TESTED_MODELS.items())
 
 
 class PageFetcher:
     """A class to fetch pages from a file."""
 
-    def __init__(self, switch_model: AutodetectedSwitchModel) -> None:
+    def __init__(self, switch_model: type[AutodetectedSwitchModel]) -> None:
         """Initialize the PageFetcher."""
         self.switch_model = switch_model
         self._sequence = 0
@@ -146,7 +55,7 @@ class PageFetcher:
         return response
 
     def get_path(self, templates: list[dict[str, str]]) -> Path:
-        """Get the path to a page."""
+        """Get the path to the first page that exists as a file."""
         for template in templates:
             url = template["url"]
             page_name = url.split("/")[-1] or DEFAULT_PAGE
@@ -158,14 +67,194 @@ class PageFetcher:
         raise FileNotFoundError
 
 
-def test_get_switch_infos() -> None:
+def test_0_from_bytes_to_megabytes() -> None:
+    """Test cases for _from_bytes_to_megabytes function."""
+    assert _from_bytes_to_megabytes(1000000) == 1.00
+    assert _from_bytes_to_megabytes(5000000) == 5.00
+    assert _from_bytes_to_megabytes(123456789) == 123.46
+    assert _from_bytes_to_megabytes(0) == 0.00
+    assert _from_bytes_to_megabytes(-1000000) == -1.00
+
+
+def test_0_netgear_switch_connector_initialization() -> None:
     """Test initialization of NetgearSwitchConnector."""
-    switch_model = GS308EP()
+    connector = NetgearSwitchConnector(host="192.168.0.1", password="password")
+    assert connector.host == "192.168.0.1"
+    assert connector._password == "password"
+    assert connector.switch_model is not None
+    assert connector.ports == 0
+    assert connector.poe_ports == []
+    assert connector.port_status == {}
+    assert connector._switch_bootloader == "unknown"
+    assert connector.sleep_time == 0.25
+    assert connector._login_page_response is not None
+    assert connector._login_page_form_password == ""
+    assert connector.cookie_name is None
+    assert connector.cookie_content is None
+    assert connector._client_hash == ""
+    assert connector._previous_data == {}
+    assert connector._loaded_switch_metadata == {}
+
+
+@pytest.mark.parametrize(
+    "switch_model",
+    TEST_MODELS,
+)
+def test_autodetect_model(switch_model: type[AutodetectedSwitchModel]) -> None:
+    """Test autodetect_model method."""
+    page_fetcher = PageFetcher(switch_model)
+    connector = NetgearSwitchConnector(host="192.168.0.1", password="password")
+    with patch("py_netgear_plus.requests.request") as mock_request:
+        mock_response = Mock()
+        with page_fetcher.get_path(switch_model.AUTODETECT_TEMPLATES).open() as file:
+            mock_response.content = file.read()
+        mock_response.status_code = requests.codes.ok
+        mock_request.return_value = mock_response
+        connector.autodetect_model()
+        assert connector._login_page_response == mock_response
+        assert isinstance(connector.switch_model, switch_model)
+
+
+@pytest.mark.parametrize(
+    "switch_model",
+    TEST_MODELS,
+)
+def test_check_login_url(switch_model: type[AutodetectedSwitchModel]) -> None:
+    """Test check_login_url method."""
+    connector = NetgearSwitchConnector(host="192.168.0.1", password="password")
+    with patch("py_netgear_plus.requests.get") as mock_get:
+        mock_response = Mock()
+        page_name = switch_model.LOGIN_TEMPLATE["url"].split("/")[-1] or DEFAULT_PAGE
+        with Path(f"pages/{switch_model.MODEL_NAME}/0/{page_name}").open() as file:
+            mock_response.content = file.read()
+        mock_response.status_code = requests.codes.ok
+        mock_get.return_value = mock_response
+        assert connector.check_login_url() is True
+        assert connector._login_page_response == mock_response
+
+
+@pytest.mark.parametrize(
+    ("switch_model", "rand"),
+    TEST_MODELS_WITH_RAND,
+)
+def test_check_login_form_rand(
+    switch_model: AutodetectedSwitchModel, rand: str
+) -> None:
+    """Test check_login_form_rand method."""
+    password = "Password1"
+    connector = NetgearSwitchConnector(host="192.168.0.1", password=password)
+    connector._login_page_response = Mock()
+    page_name = switch_model.LOGIN_TEMPLATE["url"].split("/")[-1] or DEFAULT_PAGE
+    with Path(f"pages/{switch_model.MODEL_NAME}/0/{page_name}").open() as file:
+        connector._login_page_response.content = file.read()
+    connector._login_page_response.status_code = requests.codes.ok
+    assert connector.check_login_form_rand() is True
+    assert connector._rand == rand
+    assert connector._login_page_form_password == make_md5(merge(password, rand))
+
+
+@pytest.mark.parametrize(
+    "switch_model",
+    TEST_MODELS,
+)
+def test_get_unique_id(switch_model: type[AutodetectedSwitchModel]) -> None:
+    """Test get_unique_id method."""
+    connector = NetgearSwitchConnector(host="192.168.0.1", password="password")
+    connector.switch_model = switch_model
+    assert (
+        connector.get_unique_id()
+        == f"{connector.switch_model.__name__.lower()}_192_168_0_1"
+    )
+
+
+@pytest.mark.parametrize(
+    ("switch_model", "rand"),
+    TEST_MODELS_WITH_RAND,
+)
+def test_get_login_password(
+    switch_model: type[AutodetectedSwitchModel], rand: str
+) -> None:
+    """Test get_login_password method."""
+    password = "Password1"
+    connector = NetgearSwitchConnector(host="192.168.0.1", password=password)
+    with patch("py_netgear_plus.requests.get") as mock_get:
+        mock_response = Mock()
+        page_name = switch_model.LOGIN_TEMPLATE["url"].split("/")[-1] or DEFAULT_PAGE
+        with Path(f"pages/{switch_model.MODEL_NAME}/0/{page_name}").open() as file:
+            mock_response.content = file.read()
+        mock_response.status_code = requests.codes.ok
+        mock_get.return_value = mock_response
+        connector._login_page_response = mock_response
+        assert connector.get_login_password() == make_md5(merge(password, rand))
+
+
+@pytest.mark.parametrize(
+    ("switch_model", "rand"),
+    TEST_MODELS_WITH_RAND,
+)
+def test_get_login_cookie_by_model(
+    switch_model: AutodetectedSwitchModel, rand: str
+) -> None:
+    """Test get_login_cookie method."""
+    connector = NetgearSwitchConnector(host="192.168.0.1", password="password")
+    connector.turn_on_offline_mode(f"pages/{switch_model.MODEL_NAME}/0")
+    connector.autodetect_model()
+    data = {
+        connector.switch_model.LOGIN_TEMPLATE["key"]: make_md5(
+            merge(connector._password, rand)
+        ),
+    }
+    with (
+        patch("py_netgear_plus.requests.request") as mock_request,
+    ):
+        mock_response = Mock()
+        mock_response.status_code = requests.codes.ok
+        mock_response.cookies.get.return_value = "cookie_value"
+        mock_request.return_value = mock_response
+        assert connector.get_login_cookie() is True
+        mock_request.assert_called()
+        mock_request.assert_called_with(
+            connector.switch_model.LOGIN_TEMPLATE["method"],
+            connector.switch_model.LOGIN_TEMPLATE["url"].format(ip=connector.host),
+            data=data,
+            allow_redirects=True,
+            timeout=connector.LOGIN_URL_REQUEST_TIMEOUT,
+        )
+        assert connector.cookie_name is not None
+        assert connector.cookie_content == "cookie_value"
+
+
+@pytest.mark.parametrize(
+    ("page", "expected"),
+    [
+        ("GS108Ev3/0/index.htm", True),
+        ("GS308EP/unauthenticated.html", False),
+        ("GS308EP/0/dashboard.cgi", True),
+        ("GS308EP/0/portStatistics.cgi", True),
+        ("GS316EPP/unauthenticated.html", False),
+        ("GS316EPP/0/dashboard.html", True),
+    ],
+)
+def test_is_authenticated(page: str, expected: bool) -> None:  # noqa: FBT001
+    """Test is_authenticated method."""
+    connector = NetgearSwitchConnector(host="192.168.0.1", password="XXXXXXXX")
+    response = Mock()
+    response.content = Path(f"pages/{page}").read_text()
+    response.status_code = requests.codes.ok
+    assert connector._is_authenticated(response) is expected
+
+
+@pytest.mark.parametrize(
+    "switch_model",
+    PARTIALLY_TESTED_MODELS,
+)
+def test_get_switch_infos(switch_model: type[AutodetectedSwitchModel]) -> None:
+    """Test initialization of NetgearSwitchConnector."""
     with (
         patch("py_netgear_plus.time.perf_counter", return_value=0),
         patch("py_netgear_plus.NetgearSwitchConnector.fetch_page") as mock_fetch_page,
     ):
-        page_fetcher = PageFetcher(switch_model)  # type: ignore reportAttributeTypeIssue
+        page_fetcher = PageFetcher(switch_model)
         mock_fetch_page.side_effect = page_fetcher.from_file
         connector = NetgearSwitchConnector(host="192.168.0.1", password="password")
         with patch("py_netgear_plus.requests.request") as mock_request:
@@ -173,14 +262,14 @@ def test_get_switch_infos() -> None:
             with page_fetcher.get_path(
                 switch_model.AUTODETECT_TEMPLATES
             ).open() as file:
-                mock_response.content = file.read()  # type: ignore reportAttributeAccessIssue
+                mock_response.content = file.read()
             mock_response.status_code = requests.codes.ok
             mock_request.return_value = mock_response
             connector.autodetect_model()
-        assert isinstance(connector.switch_model, switch_model.__class__)
+        assert isinstance(connector.switch_model, switch_model)
         connector._login_page_response = Mock()
         with page_fetcher.get_path([switch_model.LOGIN_TEMPLATE]).open() as file:
-            connector._login_page_response.content = file.read()  # type: ignore reportAttributeAccessIssue
+            connector._login_page_response.content = file.read()
         for sequence in range(2):
             connector._login_page_response.status_code = requests.codes.ok
             switch_data = connector.get_switch_infos()
