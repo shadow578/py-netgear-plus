@@ -14,7 +14,7 @@ from lxml.html import HtmlElement
 from . import models, netgear_crypt
 from .parsers import create_page_parser
 
-__version__ = "0.2.8"
+__version__ = "0.2.9"
 
 SWITCH_STATES = ["on", "off"]
 DEFAULT_PAGE = "index.htm"
@@ -437,9 +437,8 @@ class NetgearSwitchConnector:
         method: str,
         url: str,
         data: Any = None,
-        *,
         timeout: int = 0,
-        allow_redirects: bool = False,
+        allow_redirects: bool = False,  # noqa: FBT001, FBT002
     ) -> requests.Response:
         if not self.cookie_name or not self.cookie_content:
             success = self.get_login_cookie()
@@ -471,10 +470,9 @@ class NetgearSwitchConnector:
         if response.status_code == requests.codes.ok and not self._is_authenticated(
             response
         ):
-            if not self.get_login_cookie():
-                return response
-            with contextlib.suppress(requests.exceptions.Timeout):
-                response = requests.request(method, url, **kwargs)  # noqa: S113
+            time.sleep(self.sleep_time)
+            self.get_login_cookie()
+            response = self._request(method, url, data, timeout, allow_redirects)
         return response
 
     def fetch_page(self, templates: list) -> requests.Response | BaseResponse:
