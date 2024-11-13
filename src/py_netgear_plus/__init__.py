@@ -1,6 +1,5 @@
 """Netgear API."""
 
-import contextlib
 import logging
 import time
 from pathlib import Path
