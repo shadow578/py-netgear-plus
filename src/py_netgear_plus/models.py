@@ -245,6 +245,13 @@ class GS316EP(GS30xSeries):
             "params": {"Gambit": "cookie_content", "GetData": "TRUE"},
         }
     ]
+    LOGOUT_TEMPLATES: ClassVar = [
+        {
+            "method": "post",
+            "url": "http://{ip}/logout.html",
+            "params": {"Gambit": "cookie_content"},
+        }
+    ]
 
 
 class GS316EPP(GS316EP):

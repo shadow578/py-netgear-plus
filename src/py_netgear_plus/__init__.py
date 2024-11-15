@@ -13,7 +13,7 @@ from lxml.html import HtmlElement
 from . import models, netgear_crypt
 from .parsers import create_page_parser
 
-__version__ = "0.2.9"
+__version__ = "0.2.10"
 
 SWITCH_STATES = ["on", "off"]
 DEFAULT_PAGE = "index.htm"
@@ -337,6 +337,19 @@ class NetgearSwitchConnector:
             "[NetgearSwitchConnector.get_login_cookie] looking for cookies: %s",
             ", ".join(self.switch_model.ALLOWED_COOKIE_TYPES),
         )
+        # GS31xEP(P) series switches return the cookie value in a hidden form element
+        gambit_tag = html.fromstring(response.content).xpath('//input[@name="Gambit"]')
+        if gambit_tag:
+            self.cookie_name = self.switch_model.ALLOWED_COOKIE_TYPES[0]
+            self.cookie_content = gambit_tag[0].value
+            _LOGGER.debug("[NetgearSwitchConnector.get_login_cookie] Found Gambit tag:")
+            _LOGGER.debug(
+                "[NetgearSwitchConnector.get_login_cookie] Setting cookie %s=%s",
+                self.cookie_name,
+                self.cookie_content,
+            )
+            return True
+        # Other switches return a cookie on successful login
         for ct in self.switch_model.ALLOWED_COOKIE_TYPES:
             cookie = response.cookies.get(ct, None)
             if cookie:
@@ -372,7 +385,7 @@ class NetgearSwitchConnector:
             error_msg = tree.xpath('//input[@id="err_msg"]')
             if error_msg:
                 error_msg = error_msg[0].value
-        if error_msg is not None:
+        if error_msg:
             _LOGGER.warning(
                 "[NetgearSwitchConnector.handle_soft_authentication_failure]"
                 ' [IP: %s] Response from switch: "%s"',
@@ -382,13 +395,14 @@ class NetgearSwitchConnector:
         else:
             _LOGGER.debug(
                 "[NetgearSwitchConnector.handle_soft_authentication_failure]"
-                " No error message found in response:\n\n %s",
-                response.content,
+                " No error message found in response:\n\n%s",
+                response.content.decode("utf-8"),
             )
+
         self._authentication_failure_count += 1
         if self._authentication_failure_count >= self.MAX_AUTHENTICATION_FAILURES:
-            message = f"Too many authentication failures ({ \
-                self._authentication_failure_count})."
+            count = self._authentication_failure_count
+            message = f"Too many authentication failures ({count})."
             raise LoginFailedError(message)
 
     def _is_authenticated(self, response: requests.Response | BaseResponse) -> bool:
@@ -782,7 +796,7 @@ class NetgearSwitchConnector:
         # Avoid a second call on next get_switch_infos() call
         self._loaded_switch_metadata = {
             "switch_ip": self.host
-        } | parser.parse_switch_info(page)
+        } | parser.parse_switch_metadata(page)
 
     def _initialize_current_data(self) -> dict:
         """Initialize current data dictionary with default values."""
@@ -1082,12 +1096,7 @@ class NetgearSwitchConnector:
             self.autodetect_model()
         if not Path(path_prefix).exists():
             Path(path_prefix).mkdir(parents=True)
-        login_template = {}
-        login_template["url"] = self.switch_model.LOGIN_TEMPLATE["url"]
-        login_template["method"] = "get"
         for template in [
-            login_template,
-            *self.switch_model.AUTODETECT_TEMPLATES,
             *self.switch_model.SWITCH_INFO_TEMPLATES,
             *self.switch_model.PORT_STATISTICS_TEMPLATES,
             *self.switch_model.POE_PORT_CONFIG_TEMPLATES,
@@ -1103,7 +1112,6 @@ class NetgearSwitchConnector:
                 continue
             if response.status_code == requests.codes.ok and (
                 self._is_authenticated(response)
-                or template["url"] == login_template["url"]
             ):
                 page_name = url.split("/")[-1] or DEFAULT_PAGE
                 with Path(f"{path_prefix}/{page_name}").open("wb") as file:
@@ -1115,3 +1123,14 @@ class NetgearSwitchConnector:
                     url,
                 )
             time.sleep(self.sleep_time)
+        # The pages should be called unauthenticated, so self.fetch_page is not used
+        for template in self.switch_model.AUTODETECT_TEMPLATES:
+            url = template["url"].format(ip=self.host)
+            response = requests.get(
+                url,
+                timeout=self.LOGIN_URL_REQUEST_TIMEOUT,
+            )
+            if response.status_code == requests.codes.ok:
+                page_name = url.split("/")[-1] or DEFAULT_PAGE
+                with Path(f"{path_prefix}/{page_name}").open("wb") as file:
+                    file.write(response.content)

@@ -75,7 +75,7 @@ class PageParser:
         self._switch_bootloader = None
         _LOGGER.debug("%s(PageParser) object initialized.", self.__class__.__name__)
 
-    def parse_switch_info(self, page: requests.Response) -> dict[str, Any]:
+    def parse_switch_metadata(self, page: requests.Response) -> dict[str, Any]:
         """Parse switch info from the html page."""
         tree = html.fromstring(page.content)
 
@@ -169,7 +169,7 @@ class GS30xSeries(PageParser):
         """Initialize the GS305EP parser."""
         super().__init__()
 
-    def parse_switch_info(self, page: requests.Response) -> dict[str, Any]:
+    def parse_switch_metadata(self, page: requests.Response) -> dict[str, Any]:
         """Parse switch info from the html page."""
         tree = html.fromstring(page.content)
 
@@ -213,7 +213,7 @@ class GS31xSeries(PageParser):
         """Initialize the GS305EP parser."""
         super().__init__()
 
-    def parse_switch_info(self, page: requests.Response) -> dict[str, Any]:
+    def parse_switch_metadata(self, page: requests.Response) -> dict[str, Any]:
         """Parse switch info from the html page."""
         tree = html.fromstring(page.content)
 

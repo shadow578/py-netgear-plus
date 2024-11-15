@@ -15,19 +15,18 @@ from py_netgear_plus.models import GS308EP, GS316EPP, AutodetectedSwitchModel, G
 from py_netgear_plus.netgear_crypt import make_md5, merge
 
 # List of models with saved pages and extracted rand values
-FULLY_TESTED_MODELS = {
-    GS108Ev3: "1763184457",
-    GS308EP: "990464497",
-    GS316EPP: "1127757600",
-}
+FULLY_TESTED_MODELS = [
+    (GS108Ev3, "1763184457", "<html></html>"),
+    (GS308EP, "990464497", "<html></html>"),
+    (GS316EPP, "1127757600", '<html><input name="Gambit" value="cookie_value"</html>'),
+]
 PARTIALLY_TESTED_MODELS = [
     pytest.param(GS108Ev3, marks=pytest.mark.xfail(reason="no valid data pages")),
     GS308EP,
     GS316EPP,
 ]
 
-TEST_MODELS = list(FULLY_TESTED_MODELS.keys())
-TEST_MODELS_WITH_RAND = list(FULLY_TESTED_MODELS.items())
+TEST_MODELS = [model[0] for model in FULLY_TESTED_MODELS]
 
 
 class PageFetcher:
@@ -134,11 +133,13 @@ def test_check_login_url(switch_model: type[AutodetectedSwitchModel]) -> None:
 
 
 @pytest.mark.parametrize(
-    ("switch_model", "rand"),
-    TEST_MODELS_WITH_RAND,
+    ("switch_model", "rand", "content"),
+    FULLY_TESTED_MODELS,
 )
 def test_check_login_form_rand(
-    switch_model: AutodetectedSwitchModel, rand: str
+    switch_model: AutodetectedSwitchModel,
+    rand: str,
+    content: str,  # noqa: ARG001
 ) -> None:
     """Test check_login_form_rand method."""
     password = "Password1"
@@ -168,11 +169,13 @@ def test_get_unique_id(switch_model: type[AutodetectedSwitchModel]) -> None:
 
 
 @pytest.mark.parametrize(
-    ("switch_model", "rand"),
-    TEST_MODELS_WITH_RAND,
+    ("switch_model", "rand", "content"),
+    FULLY_TESTED_MODELS,
 )
 def test_get_login_password(
-    switch_model: type[AutodetectedSwitchModel], rand: str
+    switch_model: type[AutodetectedSwitchModel],
+    rand: str,
+    content: str,  # noqa: ARG001
 ) -> None:
     """Test get_login_password method."""
     password = "Password1"
@@ -189,11 +192,11 @@ def test_get_login_password(
 
 
 @pytest.mark.parametrize(
-    ("switch_model", "rand"),
-    TEST_MODELS_WITH_RAND,
+    ("switch_model", "rand", "content"),
+    FULLY_TESTED_MODELS,
 )
 def test_get_login_cookie_by_model(
-    switch_model: AutodetectedSwitchModel, rand: str
+    switch_model: AutodetectedSwitchModel, rand: str, content: str
 ) -> None:
     """Test get_login_cookie method."""
     connector = NetgearSwitchConnector(host="192.168.0.1", password="password")
@@ -209,6 +212,7 @@ def test_get_login_cookie_by_model(
     ):
         mock_response = Mock()
         mock_response.status_code = requests.codes.ok
+        mock_response.content = content
         mock_response.cookies.get.return_value = "cookie_value"
         mock_request.return_value = mock_response
         assert connector.get_login_cookie() is True

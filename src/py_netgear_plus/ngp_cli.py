@@ -180,13 +180,16 @@ def identify_command(
         return True
 
 
-def login_command(connector: NetgearSwitchConnector, args: argparse.Namespace) -> bool:  # noqa: ARG001
+def login_command(connector: NetgearSwitchConnector, args: argparse.Namespace) -> bool:
     """Attempt to login and save the cookie."""
     try:
-        return connector.get_login_cookie() and save_cookie(connector)
+        if connector.get_login_cookie() and save_cookie(connector):
+            if args.verbose:
+                print("Login successful.", file=stderr)  # noqa: T201
+            return True
     except LoginFailedError:
         print("Invalid credentials.", file=stderr)  # noqa: T201
-        return False
+    return False
 
 
 def logout_command(connector: NetgearSwitchConnector, args: argparse.Namespace) -> bool:  # noqa: ARG001
