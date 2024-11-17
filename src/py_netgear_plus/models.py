@@ -123,6 +123,7 @@ class GS30xSeries(AutodetectedSwitchModel):
     SWITCH_INFO_TEMPLATES: ClassVar = [
         {"method": "get", "url": "http://{ip}/dashboard.cgi"}
     ]
+    PORT_STATUS_TEMPLATES: ClassVar = SWITCH_INFO_TEMPLATES
     PORT_STATISTICS_TEMPLATES: ClassVar = [
         {"method": "get", "url": "http://{ip}/portStatistics.cgi"}
     ]
@@ -217,6 +218,7 @@ class GS316EP(GS30xSeries):
             "params": {"Gambit": "cookie_content"},
         }
     ]
+    PORT_STATUS_TEMPLATES: ClassVar = SWITCH_INFO_TEMPLATES
     PORT_STATISTICS_TEMPLATES: ClassVar = [
         {
             "method": "get",

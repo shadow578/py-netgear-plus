@@ -1,10 +1,13 @@
 """Definitions of html parsers for Netgear Plus switches."""
 
+from email import message
 import logging
 from typing import Any
 
 import requests
 from lxml import html
+
+from .fetcher import BaseResponse
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -73,9 +76,21 @@ class PageParser:
         """Empty contructor."""
         self._switch_firmware = None
         self._switch_bootloader = None
+        self._port_status = {}
         _LOGGER.debug("%s(PageParser) object initialized.", self.__class__.__name__)
 
-    def parse_switch_metadata(self, page: requests.Response) -> dict[str, Any]:
+    def has_api_v2(self) -> bool:
+        """Check if the switch has API v2."""
+        if not self._switch_firmware or not self._switch_bootloader:
+            error_message = "Firmware or bootloader version not set."
+            raise NetgearPlusPageParserError(error_message)
+        match_bootloader = self._switch_bootloader in API_V2_CHECKS["bootloader"]
+        match_firmware = self._switch_firmware in API_V2_CHECKS["firmware"]
+        return match_bootloader and match_firmware
+
+    def parse_switch_metadata(
+        self, page: requests.Response | BaseResponse
+    ) -> dict[str, Any]:
         """Parse switch info from the html page."""
         tree = html.fromstring(page.content)
 
@@ -96,36 +111,74 @@ class PageParser:
             "switch_firmware": self._switch_firmware,
         }
 
-    def parse_client_hash(self, page: requests.Response) -> str | None:
+    def parse_client_hash(self, page: requests.Response | BaseResponse) -> str | None:
         """Parse the client hash from the html page."""
         tree = html.fromstring(page.content)
         return get_first_value(tree, '//input[@name="hash"]')
 
-    def parse_port_status(self, page: requests.Response) -> dict[str, Any]:
+    def parse_port_status(
+        self, page: requests.Response | BaseResponse, ports: int
+    ) -> dict[int, dict[str, Any]]:
         """Parse port status from the html page."""
-        raise NotImplementedError
+        status_by_port = {}
 
-    def parse_port_statistics(self, page: requests.Response) -> dict[str, Any]:
+        if self.has_api_v2():
+            tree = html.fromstring(page.content)
+            _port_elems = tree.xpath('//tr[@class="portID"]/td[2]')
+            portstatus_elems = tree.xpath('//tr[@class="portID"]/td[3]')
+            portspeed_elems = tree.xpath('//tr[@class="portID"]/td[4]')
+            portconnectionspeed_elems = tree.xpath('//tr[@class="portID"]/td[5]')
+
+            for port_nr in range(ports):
+                try:
+                    status_text = portstatus_elems[port_nr].text.replace("\n", "")
+                    modus_speed_text = portspeed_elems[port_nr].text.replace("\n", "")
+                    connection_speed_text = portconnectionspeed_elems[
+                        port_nr
+                    ].text.replace("\n", "")
+                except (IndexError, AttributeError):
+                    status_text = self.port_status.get(port_nr + 1, {}).get(
+                        "status", None
+                    )
+                    modus_speed_text = self.port_status.get(port_nr + 1, {}).get(
+                        "modus_speed", None
+                    )
+                    connection_speed_text = self.port_status.get(port_nr + 1, {}).get(
+                        "connection_speed", None
+                    )
+                status_by_port[port_nr + 1] = {
+                    "status": status_text,
+                    "modus_speed": modus_speed_text,
+                    "connection_speed": connection_speed_text,
+                }
+
+        self.port_status = status_by_port
+        _LOGGER.debug("Port Status is %s", self.port_status)
+        return status_by_port
+
+    def parse_port_statistics(
+        self, page: requests.Response | BaseResponse
+    ) -> dict[str, Any]:
         """Parse port statistics from the html page."""
-        if not self._switch_firmware or not self._switch_bootloader:
-            error_message = "Firmware or bootloader vresion not set."
-            raise NetgearPlusPageParserError(error_message)
-        if (
-            self._switch_firmware in API_V2_CHECKS["firmware"]
-            and self._switch_bootloader in API_V2_CHECKS["bootloader"]
-        ):
+        if self.has_api_v2():
             return self.parse_port_statistics_v2(page)
         return self.parse_port_statistics_v1(page)
 
-    def parse_port_statistics_v1(self, page: requests.Response) -> dict[str, Any]:
+    def parse_port_statistics_v1(
+        self, page: requests.Response | BaseResponse
+    ) -> dict[str, Any]:
         """Parse port status from the html page."""
         raise NotImplementedError
 
-    def parse_port_statistics_v2(self, page: requests.Response) -> dict[str, Any]:
+    def parse_port_statistics_v2(
+        self, page: requests.Response | BaseResponse
+    ) -> dict[str, Any]:
         """Parse port status from the html page."""
         raise NotImplementedError
 
-    def parse_poe_port_config(self, page: requests.Response) -> dict[str, Any]:
+    def parse_poe_port_config(
+        self, page: requests.Response | BaseResponse
+    ) -> dict[str, Any]:
         """Parse PoE port configuration from the html page."""
         raise NotImplementedError
 
@@ -139,7 +192,7 @@ class GS105E(PageParser):
 
 
 class GS105Ev2(PageParser):
-    """Parser for the GS105E switch."""
+    """Parser for the GS105Ev2 switch."""
 
     def __init__(self) -> None:
         """Initialize the GS105Ev2 parser."""
@@ -147,7 +200,7 @@ class GS105Ev2(PageParser):
 
 
 class GS105Ev3(PageParser):
-    """Parser for the GS105E switch."""
+    """Parser for the GS105Ev3 switch."""
 
     def __init__(self) -> None:
         """Initialize the GS105Ev3 parser."""
@@ -155,7 +208,15 @@ class GS105Ev3(PageParser):
 
 
 class GS108E(PageParser):
-    """Parser for the GS105E switch."""
+    """Parser for the GS108E switch."""
+
+    def __init__(self) -> None:
+        """Initialize the GS108E parser."""
+        super().__init__()
+
+
+class GS108Ev3(PageParser):
+    """Parser for the GS108E v3switch."""
 
     def __init__(self) -> None:
         """Initialize the GS108E parser."""
@@ -163,13 +224,15 @@ class GS108E(PageParser):
 
 
 class GS30xSeries(PageParser):
-    """Parser for the GS105E switch."""
+    """Parser for the GS30x switch series."""
 
     def __init__(self) -> None:
-        """Initialize the GS305EP parser."""
+        """Initialize the GS30xSeries parser."""
         super().__init__()
 
-    def parse_switch_metadata(self, page: requests.Response) -> dict[str, Any]:
+    def parse_switch_metadata(
+        self, page: requests.Response | BaseResponse
+    ) -> dict[str, Any]:
         """Parse switch info from the html page."""
         tree = html.fromstring(page.content)
 
@@ -189,9 +252,41 @@ class GS30xSeries(PageParser):
             "switch_firmware": self._switch_firmware,
         }
 
+    def parse_port_status(
+        self, page: requests.Response | BaseResponse, ports: int
+    ) -> dict[int, dict[str, Any]]:
+        """Parse port status from the html page."""
+        tree = html.fromstring(page.content)
+
+        status_by_port = {}
+        for port0 in range(ports):
+            port_nr = port0 + 1
+            xtree_port = tree.xpath(f'//div[@name="isShowPot{port_nr}"]')[0]
+            port_state_text = xtree_port[1][0].text
+
+            modus_speed_text = tree.xpath('//input[@class="Speed"]')[port0].value
+            if modus_speed_text == "1":
+                modus_speed_text = "Auto"
+            connection_speed_text = tree.xpath('//input[@class="LinkedSpeed"]')[
+                port0
+            ].value
+            connection_speed_text = (
+                connection_speed_text.replace("full", "").replace("half", "").strip()
+            )
+
+            status_by_port[port_nr] = {
+                "status": port_state_text,
+                "modus_speed": modus_speed_text,
+                "connection_speed": connection_speed_text,
+            }
+
+        self.port_status = status_by_port
+        _LOGGER.debug("Port Status is %s", self.port_status)
+        return status_by_port
+
 
 class GS305EP(GS30xSeries):
-    """Parser for the GS105E switch."""
+    """Parser for the GS305EP switch."""
 
     def __init__(self) -> None:
         """Initialize the GS305EP parser."""
@@ -199,7 +294,7 @@ class GS305EP(GS30xSeries):
 
 
 class GS308EP(GS30xSeries):
-    """Parser for the GS105E switch."""
+    """Parser for the GS108EP switch."""
 
     def __init__(self) -> None:
         """Initialize the GS308EP parser."""
@@ -207,13 +302,15 @@ class GS308EP(GS30xSeries):
 
 
 class GS31xSeries(PageParser):
-    """Parser for the GS105E switch."""
+    """Parser for the GS31x switch series."""
 
     def __init__(self) -> None:
-        """Initialize the GS305EP parser."""
+        """Initialize the GS31xSeries parser."""
         super().__init__()
 
-    def parse_switch_metadata(self, page: requests.Response) -> dict[str, Any]:
+    def parse_switch_metadata(
+        self, page: requests.Response | BaseResponse
+    ) -> dict[str, Any]:
         """Parse switch info from the html page."""
         tree = html.fromstring(page.content)
 
@@ -233,13 +330,46 @@ class GS31xSeries(PageParser):
             "switch_firmware": self._switch_firmware,
         }
 
-    def parse_client_hash(self, page: requests.Response) -> str | None:  # noqa: ARG002
+    def parse_client_hash(self, page: requests.Response | BaseResponse) -> str | None:  # noqa: ARG002
         """Return None as these switches do not have a hash value."""
         return None
 
+    def parse_port_status(
+        self, page: requests.Response | BaseResponse, ports: int
+    ) -> dict[int, dict[str, Any]]:
+        """Parse port status from the html page."""
+        tree = html.fromstring(page.content)
+        xtree_port_statusses = tree.xpath('//span[contains(@class,"status-on-port")]')
+        xtree_port_attributes = tree.xpath('//div[@class="port-status"]')
+        if len(xtree_port_statusses) != ports or len(xtree_port_attributes) != ports:
+            message = (
+                "Port count mismatch: Expected %s, got %s (status) and %s (attributes)",
+                ports,
+                len(xtree_port_statusses),
+                len(xtree_port_attributes),
+            )
+            raise NetgearPlusPageParserError(message)
+        status_by_port = {}
+        for port_nr0 in range(ports):
+            port_nr = port_nr0 + 1
+            port_state_text = xtree_port_statusses[port_nr0].text
+            port_attributes = xtree_port_attributes[port_nr0].xpath("./div/div/p")
+            modus_speed_text = port_attributes[1].text
+            connection_speed_text = port_attributes[1].text.replace("half", "").strip()
+
+            status_by_port[port_nr] = {
+                "status": port_state_text,
+                "modus_speed": modus_speed_text,
+                "connection_speed": connection_speed_text,
+            }
+
+        self.port_status = status_by_port
+        _LOGGER.debug("Port Status is %s", self.port_status)
+        return status_by_port
+
 
 class GS316EP(GS31xSeries):
-    """Parser for the GS105E switch."""
+    """Parser for the GS316EP switch."""
 
     def __init__(self) -> None:
         """Initialize the GS316EP parser."""
@@ -247,7 +377,7 @@ class GS316EP(GS31xSeries):
 
 
 class GS316EPP(GS31xSeries):
-    """Parser for the GS105E switch."""
+    """Parser for the GS316EPP switch."""
 
     def __init__(self) -> None:
         """Initialize the GS316EPP parser."""
@@ -259,6 +389,7 @@ PARSERS = {
     "GS105Ev2": GS105Ev2,
     "GS105Ev3": GS105Ev3,
     "GS108E": GS108E,
+    "GS108Ev3": GS108Ev3,
     "GS305EP": GS305EP,
     "GS308EP": GS308EP,
     "GS316EP": GS316EP,

@@ -83,7 +83,6 @@ def test_0_netgear_switch_connector_initialization() -> None:
     assert connector.switch_model is not None
     assert connector.ports == 0
     assert connector.poe_ports == []
-    assert connector.port_status == {}
     assert connector._switch_bootloader == "unknown"
     assert connector.sleep_time == 0.25
     assert connector._login_page_response is not None

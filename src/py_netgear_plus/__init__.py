@@ -11,9 +11,10 @@ from lxml import html
 from lxml.html import HtmlElement
 
 from . import models, netgear_crypt
-from .parsers import create_page_parser
+from .fetcher import BaseResponse, PageNotLoadedError
+from .parsers import PageParser, create_page_parser
 
-__version__ = "0.2.10"
+__version__ = "0.2.11rc0"
 
 SWITCH_STATES = ["on", "off"]
 DEFAULT_PAGE = "index.htm"
@@ -29,7 +30,7 @@ def _from_bytes_to_megabytes(v: float) -> float:
     return float(f"{round(v * bytes_to_mbytes, 2):.2f}")
 
 
-PORT_STATUS_CONNECTED = ["Aktiv", "Up", "UP"]
+PORT_STATUS_CONNECTED = ["Aktiv", "Up", "UP", "CONNECTED"]
 PORT_MODUS_SPEED = ["Auto"]
 
 
@@ -48,24 +49,6 @@ class SwitchModelNotDetectedError(Exception):
     """None of the models passed the tests."""
 
 
-class PageNotLoadedError(Exception):
-    """Failed to load the page."""
-
-
-class BaseResponse:
-    """Base class for response objects."""
-
-    def __init__(self) -> None:
-        """Initialize BaseResponse Object."""
-        self.status_code = requests.codes.not_found
-        self.content = b""
-        self.cookies = requests.cookies.RequestsCookieJar()
-
-    def __bool__(self) -> bool:
-        """Return True if status code is 200."""
-        return self.status_code == requests.codes.ok
-
-
 class NetgearSwitchConnector:
     """Representation of a Netgear Switch."""
 
@@ -79,9 +62,9 @@ class NetgearSwitchConnector:
 
         # initial values
         self.switch_model = models.AutodetectedSwitchModel
+        self.page_parser = PageParser()
         self.ports = 0
         self.poe_ports = []
-        self.port_status = {}
         self._switch_bootloader = "unknown"
 
         # offline mode settings
@@ -91,6 +74,7 @@ class NetgearSwitchConnector:
         # sleep time between requests
         self.sleep_time = 0.25
 
+        # Login related instance variables
         # plain login password
         self._password = password
         # response of login page request
@@ -180,6 +164,9 @@ class NetgearSwitchConnector:
                         matched_models[0].MODEL_NAME,
                     )
                     if self.switch_model:
+                        self.page_parser = create_page_parser(
+                            self.switch_model.MODEL_NAME
+                        )
                         return self.switch_model
                 if len(matched_models) > 1:
                     raise MultipleModelsDetectedError(str(matched_models))
@@ -621,75 +608,6 @@ class NetgearSwitchConnector:
             "speed_io": io_zeros,
         }
 
-    def _parse_port_status(self, tree: HtmlElement) -> dict:
-        status_by_port = {}
-
-        if isinstance(self.switch_model, (models.GS30xSeries)):
-            for port0 in range(self.ports):
-                port_nr = port0 + 1
-                xtree_port = tree.xpath(f'//div[@name="isShowPot{port_nr}"]')[0]
-                port_state_text = xtree_port[1][0].text
-
-                modus_speed_text = tree.xpath('//input[@class="Speed"]')[port0].value
-                if modus_speed_text == "1":
-                    modus_speed_text = "Auto"
-                connection_speed_text = tree.xpath('//input[@class="LinkedSpeed"]')[
-                    port0
-                ].value
-                connection_speed_text = (
-                    connection_speed_text.replace("full", "")
-                    .replace("half", "")
-                    .strip()
-                )
-
-                status_by_port[port_nr] = {
-                    "status": port_state_text,
-                    "modus_speed": modus_speed_text,
-                    "connection_speed": connection_speed_text,
-                }
-
-        else:
-            match_bootloader = self._switch_bootloader in API_V2_CHECKS["bootloader"]
-            match_firmware = (
-                self._loaded_switch_metadata.get("switch_firmware", "")
-                in API_V2_CHECKS["firmware"]
-            )
-
-            if match_bootloader or match_firmware:
-                _port_elems = tree.xpath('//tr[@class="portID"]/td[2]')
-                portstatus_elems = tree.xpath('//tr[@class="portID"]/td[3]')
-                portspeed_elems = tree.xpath('//tr[@class="portID"]/td[4]')
-                portconnectionspeed_elems = tree.xpath('//tr[@class="portID"]/td[5]')
-
-                for port_nr in range(self.ports):
-                    try:
-                        status_text = portstatus_elems[port_nr].text.replace("\n", "")
-                        modus_speed_text = portspeed_elems[port_nr].text.replace(
-                            "\n", ""
-                        )
-                        connection_speed_text = portconnectionspeed_elems[
-                            port_nr
-                        ].text.replace("\n", "")
-                    except (IndexError, AttributeError):
-                        status_text = self.port_status.get(port_nr + 1, {}).get(
-                            "status", None
-                        )
-                        modus_speed_text = self.port_status.get(port_nr + 1, {}).get(
-                            "modus_speed", None
-                        )
-                        connection_speed_text = self.port_status.get(
-                            port_nr + 1, {}
-                        ).get("connection_speed", None)
-                    status_by_port[port_nr + 1] = {
-                        "status": status_text,
-                        "modus_speed": modus_speed_text,
-                        "connection_speed": connection_speed_text,
-                    }
-
-        self.port_status = status_by_port
-        _LOGGER.debug("Port Status is %s", self.port_status)
-        return status_by_port
-
     def _parse_poe_port_config(self, tree: HtmlElement) -> dict:
         config_by_port = {}
         poe_port_power_x = tree.xpath('//input[@id="hidPortPwr"]')
@@ -736,16 +654,16 @@ class NetgearSwitchConnector:
         switch_data = {}
 
         if not self._loaded_switch_metadata:
-            self._load_switch_metadata()
-
+            self._get_switch_metadata()
         switch_data.update(**self._loaded_switch_metadata)
-
-        if not self.switch_model.SUPPORTED:
-            return switch_data
 
         # Fetch Port Status
         time.sleep(self.sleep_time)
         switch_data.update(self._get_port_status())
+
+        # Partially supported models fail parsing below this line
+        if not self.switch_model.SUPPORTED:
+            return switch_data
 
         # Hold fire
         time.sleep(self.sleep_time)
@@ -783,20 +701,19 @@ class NetgearSwitchConnector:
 
         return switch_data
 
-    def _load_switch_metadata(self) -> None:
+    def _get_switch_metadata(self) -> None:
         if not self.switch_model:
             self.autodetect_model()
         page = self.fetch_page(self.switch_model.SWITCH_INFO_TEMPLATES)
         if not page.content:
             return
-        parser = create_page_parser(self.switch_model.MODEL_NAME)
 
-        self._client_hash = parser.parse_client_hash(page)
+        self._client_hash = self.page_parser.parse_client_hash(page)
 
         # Avoid a second call on next get_switch_infos() call
         self._loaded_switch_metadata = {
             "switch_ip": self.host
-        } | parser.parse_switch_metadata(page)
+        } | self.page_parser.parse_switch_metadata(page)
 
     def _initialize_current_data(self) -> dict:
         """Initialize current data dictionary with default values."""
@@ -992,46 +909,29 @@ class NetgearSwitchConnector:
 
     def _get_port_status(self) -> dict:
         switch_data = {}
-        if isinstance(self.switch_model, (models.GS30xSeries)):
-            response_dashboard = self.fetch_page(
-                self.switch_model.SWITCH_INFO_TEMPLATES
-            )
-            tree_response_dashboard = html.fromstring(response_dashboard.content)
-            port_status = self._parse_port_status(tree=tree_response_dashboard)
-        else:
-            response_portstatus = self.fetch_page(
-                self.switch_model.PORT_STATUS_TEMPLATES
-            )
-            tree_portstatus = html.fromstring(response_portstatus.content)
-            port_status = self._parse_port_status(tree=tree_portstatus)
+        response_portstatus = self.fetch_page(self.switch_model.PORT_STATUS_TEMPLATES)
+        port_status = self.page_parser.parse_port_status(
+            response_portstatus, self.ports
+        )
 
         for port_number in range(1, self.ports + 1):
             if len(port_status) == self.ports:
                 switch_data[f"port_{port_number}_status"] = (
                     "on"
-                    if self.port_status[port_number].get("status")
-                    in PORT_STATUS_CONNECTED
+                    if port_status[port_number].get("status") in PORT_STATUS_CONNECTED
                     else "off"
                 )
                 switch_data[f"port_{port_number}_modus_speed"] = (
-                    self.port_status[port_number].get("modus_speed") in PORT_MODUS_SPEED
+                    port_status[port_number].get("modus_speed") in PORT_MODUS_SPEED
                 )
-                port_connection_speed = self.port_status[port_number].get(
-                    "connection_speed"
-                )
-                if port_connection_speed == "1000M":
-                    port_connection_speed = 1000
-                elif port_connection_speed == "100M":
-                    port_connection_speed = 100
-                elif port_connection_speed == "10M":
-                    port_connection_speed = 10
-                elif port_connection_speed in ["Nicht verbunden"]:
-                    port_connection_speed = 0
+                port_connection_speed = port_status[port_number].get("connection_speed")
+                port_connection_speeds = {"1000M": 1000, "100M": 100, "10M": 10}
+                if port_connection_speed in port_connection_speeds:
+                    switch_data[f"port_{port_number}_connection_speed"] = (
+                        port_connection_speeds[port_connection_speed]
+                    )
                 else:
-                    port_connection_speed = 0
-                switch_data[f"port_{port_number}_connection_speed"] = (
-                    port_connection_speed
-                )
+                    switch_data[f"port_{port_number}_connection_speed"] = 0
         return switch_data
 
     def switch_poe_port(self, poe_port: int, state: str) -> bool:
