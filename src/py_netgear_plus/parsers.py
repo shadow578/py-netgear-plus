@@ -1,6 +1,5 @@
 """Definitions of html parsers for Netgear Plus switches."""
 
-from email import message
 import logging
 from typing import Any
 
