@@ -60,6 +60,34 @@ def get_text_from_next_element(tree: html.HtmlElement, xpath: str) -> str:
         raise NetgearPlusPageParserError(message) from error
 
 
+# convert to int
+def convert_to_int(
+    lst: list,
+    output_elems: int,
+    base: int = 10,
+    attr_name: str = "text",
+) -> list:
+    """Convert a list of objects to a list of integers."""
+    new_lst = []
+    for obj in lst:
+        try:
+            value = int(getattr(obj, attr_name), base)
+        except (TypeError, ValueError):
+            value = 0
+        new_lst.append(value)
+
+    if len(new_lst) < output_elems:
+        diff = output_elems - len(new_lst)
+        new_lst.extend([0] * diff)
+    return new_lst
+
+
+def convert_gs3xx_to_int(input_1: str, input_2: str, base: int = 10) -> int:
+    """Convert two strings to an integer."""
+    int32 = 2**32
+    return int(input_1, base) * int32 + int(input_2, base)
+
+
 class NetgearPlusPageParserError(Exception):
     """Base class for NetgearSwitchParser errors."""
 
@@ -81,7 +109,10 @@ class PageParser:
     def has_api_v2(self) -> bool:
         """Check if the switch has API v2."""
         if not self._switch_firmware or not self._switch_bootloader:
-            error_message = "Firmware or bootloader version not set."
+            error_message = (
+                "Firmware or bootloader version not set. "
+                "Call parse_switch_metadata first."
+            )
             raise NetgearPlusPageParserError(error_message)
         match_bootloader = self._switch_bootloader in API_V2_CHECKS["bootloader"]
         match_firmware = self._switch_firmware in API_V2_CHECKS["firmware"]
@@ -130,11 +161,11 @@ class PageParser:
 
             for port_nr in range(ports):
                 try:
-                    status_text = portstatus_elems[port_nr].text.replace("\n", "")
-                    modus_speed_text = portspeed_elems[port_nr].text.replace("\n", "")
+                    status_text = portstatus_elems[port_nr].text.strip()
+                    modus_speed_text = portspeed_elems[port_nr].text.strip()
                     connection_speed_text = portconnectionspeed_elems[
                         port_nr
-                    ].text.replace("\n", "")
+                    ].text.strip()
                 except (IndexError, AttributeError):
                     status_text = self.port_status.get(port_nr + 1, {}).get(
                         "status", None
@@ -156,24 +187,58 @@ class PageParser:
         return status_by_port
 
     def parse_port_statistics(
-        self, page: requests.Response | BaseResponse
+        self, page: requests.Response | BaseResponse, ports: int
     ) -> dict[str, Any]:
         """Parse port statistics from the html page."""
         if self.has_api_v2():
-            return self.parse_port_statistics_v2(page)
-        return self.parse_port_statistics_v1(page)
+            return self.parse_port_statistics_v2(page, ports)
+        return self.parse_port_statistics_v1(page, ports)
 
     def parse_port_statistics_v1(
-        self, page: requests.Response | BaseResponse
+        self, page: requests.Response | BaseResponse, ports: int
     ) -> dict[str, Any]:
-        """Parse port status from the html page."""
-        raise NotImplementedError
+        """Parse port statistics from the html page."""
+        tree = html.fromstring(page.content)
+        rx_elems = tree.xpath('//tr[@class="portID"]/td[2]')
+        tx_elems = tree.xpath('//tr[@class="portID"]/td[3]')
+        crc_elems = tree.xpath('//tr[@class="portID"]/td[4]')
+
+        # convert to int (base 10)
+        rx = convert_to_int(rx_elems, output_elems=ports, base=10, attr_name="text")
+        tx = convert_to_int(tx_elems, output_elems=ports, base=10, attr_name="text")
+        crc = convert_to_int(crc_elems, output_elems=ports, base=10, attr_name="text")
+        io_zeros = [0] * ports
+        return {
+            "traffic_rx": rx,
+            "traffic_tx": tx,
+            "sum_rx": rx,
+            "sum_tx": tx,
+            "crc_errors": crc,
+            "speed_io": io_zeros,
+        }
 
     def parse_port_statistics_v2(
-        self, page: requests.Response | BaseResponse
+        self, page: requests.Response | BaseResponse, ports: int
     ) -> dict[str, Any]:
         """Parse port status from the html page."""
-        raise NotImplementedError
+        tree = html.fromstring(page.content)
+        rx_elems = tree.xpath('//input[@name="rxPkt"]')
+        tx_elems = tree.xpath('//input[@name="txpkt"]')
+        crc_elems = tree.xpath('//input[@name="crcPkt"]')
+
+        # convert to int (base 16)
+        rx = convert_to_int(rx_elems, output_elems=ports, base=16, attr_name="value")
+        tx = convert_to_int(tx_elems, output_elems=ports, base=16, attr_name="value")
+        crc = convert_to_int(crc_elems, output_elems=ports, base=16, attr_name="value")
+        io_zeros = [0] * ports
+        return {
+            "traffic_rx": rx,
+            "traffic_tx": tx,
+            "sum_rx": rx,
+            "sum_tx": tx,
+            "crc_errors": crc,
+            "speed_io": io_zeros,
+        }
 
     def parse_poe_port_config(
         self, page: requests.Response | BaseResponse
@@ -283,6 +348,41 @@ class GS30xSeries(PageParser):
         _LOGGER.debug("Port Status is %s", self.port_status)
         return status_by_port
 
+    def parse_port_statistics(
+        self, page: requests.Response | BaseResponse, ports: int
+    ) -> dict[str, Any]:
+        """Parse port statistics from the html page."""
+        tree = html.fromstring(page.content)
+        rx = []
+        tx = []
+        crc = []
+
+        page_inputs = tree.xpath('//*[@id="settingsStatusContainer"]/div/ul/input')
+        for port_nr in range(ports):
+            input_1_text: str = page_inputs[port_nr * 6].value
+            input_2_text: str = page_inputs[port_nr * 6 + 1].value
+            rx_value = convert_gs3xx_to_int(input_1_text, input_2_text)
+            rx.append(rx_value)
+
+            input_3_text: str = page_inputs[port_nr * 6 + 2].value
+            input_4_text: str = page_inputs[port_nr * 6 + 3].value
+            tx_value = convert_gs3xx_to_int(input_3_text, input_4_text)
+            tx.append(tx_value)
+
+            input_5_text: str = page_inputs[port_nr * 6 + 4].value
+            input_6_text: str = page_inputs[port_nr * 6 + 5].value
+            crc_value = convert_gs3xx_to_int(input_5_text, input_6_text)
+            crc.append(crc_value)
+        io_zeros = [0] * ports
+        return {
+            "traffic_rx": rx,
+            "traffic_tx": tx,
+            "sum_rx": rx,
+            "sum_tx": tx,
+            "crc_errors": crc,
+            "speed_io": io_zeros,
+        }
+
 
 class GS305EP(GS30xSeries):
     """Parser for the GS305EP switch."""
@@ -365,6 +465,44 @@ class GS31xSeries(PageParser):
         self.port_status = status_by_port
         _LOGGER.debug("Port Status is %s", self.port_status)
         return status_by_port
+
+    def parse_port_statistics(
+        self, page: requests.Response | BaseResponse, ports: int
+    ) -> dict[str, Any]:
+        """Parse port statistics from the html page."""
+        tree = html.fromstring(page.content)
+        rx = []
+        tx = []
+        crc = []
+
+        page_inputs = tree.xpath("//table/tr/td")
+
+        for port_nr in range(1, ports + 1):
+            try:
+                rx_value = int(page_inputs[port_nr * 4 + 1].text)
+            except (IndexError, ValueError):
+                rx_value = 0
+            rx.append(rx_value)
+            try:
+                tx_value = int(page_inputs[port_nr * 4 + 2].text)
+            except (IndexError, ValueError):
+                tx_value = 0
+            tx.append(tx_value)
+            try:
+                crc_value = int(page_inputs[port_nr * 4 + 3].text)
+            except (IndexError, ValueError):
+                crc_value = 0
+            crc.append(crc_value)
+
+        io_zeros = [0] * ports
+        return {
+            "traffic_rx": rx,
+            "traffic_tx": tx,
+            "sum_rx": rx,
+            "sum_tx": tx,
+            "crc_errors": crc,
+            "speed_io": io_zeros,
+        }
 
 
 class GS316EP(GS31xSeries):

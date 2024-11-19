@@ -14,7 +14,7 @@ from . import models, netgear_crypt
 from .fetcher import BaseResponse, PageNotLoadedError
 from .parsers import PageParser, create_page_parser
 
-__version__ = "0.2.11"
+__version__ = "0.2.12"
 
 SWITCH_STATES = ["on", "off"]
 DEFAULT_PAGE = "index.htm"
@@ -511,103 +511,6 @@ class NetgearSwitchConnector:
                     value,
                 )
 
-    def _parse_port_statistics(self, tree: HtmlElement) -> dict[str, Any]:
-        # convert to int
-        def convert_to_int(
-            lst: list,
-            output_elems: int,
-            base: int = 10,
-            attr_name: str = "text",
-        ) -> list:
-            new_lst = []
-            for obj in lst:
-                try:
-                    value = int(getattr(obj, attr_name), base)
-                except (TypeError, ValueError):
-                    value = 0
-                new_lst.append(value)
-
-            if len(new_lst) < output_elems:
-                diff = output_elems - len(new_lst)
-                new_lst.extend([0] * diff)
-            return new_lst
-
-        def convert_gs3xx_to_int(input_1: str, input_2: str, base: int = 10) -> int:
-            int32 = 2**32
-            return int(input_1, base) * int32 + int(input_2, base)
-
-        if isinstance(self.switch_model, models.GS30xSeries):
-            rx = []
-            tx = []
-            crc = []
-            port_i = 0
-
-            for _port in range(self.ports):
-                page_inputs = tree.xpath(
-                    '//*[@id="settingsStatusContainer"]/div/ul/input'
-                )
-                input_1_text: str = page_inputs[port_i].value
-                input_2_text: str = page_inputs[port_i + 1].value
-                rx_value = convert_gs3xx_to_int(input_1_text, input_2_text)
-                rx.append(rx_value)
-
-                input_3_text: str = page_inputs[port_i + 2].value
-                input_4_text: str = page_inputs[port_i + 3].value
-                tx_value = convert_gs3xx_to_int(input_3_text, input_4_text)
-                tx.append(tx_value)
-
-                crc.append(0)
-
-                port_i += 6
-
-        else:
-            match_bootloader = self._switch_bootloader in API_V2_CHECKS["bootloader"]
-            match_firmware = (
-                self._loaded_switch_metadata.get("switch_firmware", "")
-                in API_V2_CHECKS["firmware"]
-            )
-
-            if match_bootloader or match_firmware:
-                rx_elems = tree.xpath('//input[@name="rxPkt"]')
-                tx_elems = tree.xpath('//input[@name="txpkt"]')
-                crc_elems = tree.xpath('//input[@name="crcPkt"]')
-
-                # convert to int (base 16)
-                rx = convert_to_int(
-                    rx_elems, output_elems=self.ports, base=16, attr_name="value"
-                )
-                tx = convert_to_int(
-                    tx_elems, output_elems=self.ports, base=16, attr_name="value"
-                )
-                crc = convert_to_int(
-                    crc_elems, output_elems=self.ports, base=16, attr_name="value"
-                )
-
-            else:
-                rx_elems = tree.xpath('//tr[@class="portID"]/td[2]')
-                tx_elems = tree.xpath('//tr[@class="portID"]/td[3]')
-                crc_elems = tree.xpath('//tr[@class="portID"]/td[4]')
-
-                # convert to int (base 10)
-                rx = convert_to_int(
-                    rx_elems, output_elems=self.ports, base=10, attr_name="text"
-                )
-                tx = convert_to_int(
-                    tx_elems, output_elems=self.ports, base=10, attr_name="text"
-                )
-                crc = convert_to_int(
-                    crc_elems, output_elems=self.ports, base=10, attr_name="text"
-                )
-        io_zeros = [0] * self.ports
-        return {
-            "traffic_rx": rx,
-            "traffic_tx": tx,
-            "sum_rx": rx,
-            "sum_tx": tx,
-            "crc_errors": crc,
-            "speed_io": io_zeros,
-        }
-
     def _parse_poe_port_config(self, tree: HtmlElement) -> dict:
         config_by_port = {}
         poe_port_power_x = tree.xpath('//input[@id="hidPortPwr"]')
@@ -661,25 +564,14 @@ class NetgearSwitchConnector:
         time.sleep(self.sleep_time)
         switch_data.update(self._get_port_status())
 
-        # Partially supported models fail parsing below this line
-        if not self.switch_model.SUPPORTED:
-            return switch_data
-
         # Hold fire
         time.sleep(self.sleep_time)
 
-        response_portstatistics = self.fetch_page(
-            self.switch_model.PORT_STATISTICS_TEMPLATES
-        )
-        if not response_portstatistics:
-            return switch_data
-
-        current_data = self._initialize_current_data()
         _start_time = time.perf_counter()
 
+        current_data = self._initialize_current_data()
         # Parse port statistics html
-        tree_portstatistics = html.fromstring(response_portstatistics.content)
-        current_data.update(self._parse_port_statistics(tree=tree_portstatistics))
+        current_data.update(self._get_port_statistics())
 
         if not self.offline_mode:
             sample_time = _start_time - self._previous_timestamp
@@ -690,6 +582,10 @@ class NetgearSwitchConnector:
         self._update_current_data(current_data, switch_data, sample_time)
 
         switch_data.update(self._updated_switch_data(current_data))
+
+        # Partially supported models fail parsing below this line
+        if not self.switch_model.SUPPORTED:
+            return switch_data
 
         if isinstance(self.switch_model, (models.GS30xSeries)):
             time.sleep(self.sleep_time)
@@ -714,6 +610,10 @@ class NetgearSwitchConnector:
         self._loaded_switch_metadata = {
             "switch_ip": self.host
         } | self.page_parser.parse_switch_metadata(page)
+
+    def _get_port_statistics(self) -> dict[str, Any]:
+        response = self.fetch_page(self.switch_model.PORT_STATISTICS_TEMPLATES)
+        return self.page_parser.parse_port_statistics(response, self.ports)
 
     def _initialize_current_data(self) -> dict:
         """Initialize current data dictionary with default values."""
