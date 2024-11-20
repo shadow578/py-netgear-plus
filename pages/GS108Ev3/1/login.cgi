@@ -95,7 +95,7 @@ function showErrmsg()
  		   </table>
  		  </div></div></div></div></div>
 		  <input type=hidden id="rand" name="rand" value='1763184457' disabled>
- 		  <input type=hidden name='err_msg' id='err_msg' value='Ihr Konto ist vorübergehend gesperrt. Versuchen Sie es in 5 Minuten erneut.' disabled>
+ 		  <input type=hidden name='err_msg' id='err_msg' value='Das Passwort ist ungültig.' disabled>
  		 </form>
  		</div>
          <div class="footerImg">

@@ -14,7 +14,7 @@ from . import models, netgear_crypt
 from .fetcher import BaseResponse, PageNotLoadedError
 from .parsers import PageParser, create_page_parser
 
-__version__ = "0.2.12"
+__version__ = "0.2.13rc0"
 
 SWITCH_STATES = ["on", "off"]
 DEFAULT_PAGE = "index.htm"
@@ -898,6 +898,7 @@ class NetgearSwitchConnector:
             Path(path_prefix).mkdir(parents=True)
         for template in [
             *self.switch_model.SWITCH_INFO_TEMPLATES,
+            *self.switch_model.PORT_STATUS_TEMPLATES,
             *self.switch_model.PORT_STATISTICS_TEMPLATES,
             *self.switch_model.POE_PORT_CONFIG_TEMPLATES,
             *self.switch_model.POE_PORT_STATUS_TEMPLATES,
