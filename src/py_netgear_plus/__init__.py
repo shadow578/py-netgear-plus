@@ -14,7 +14,7 @@ from . import models, netgear_crypt
 from .fetcher import BaseResponse, PageNotLoadedError
 from .parsers import PageParser, create_page_parser
 
-__version__ = "0.2.13rc0"
+__version__ = "0.2.13rc1"
 
 SWITCH_STATES = ["on", "off"]
 DEFAULT_PAGE = "index.htm"
@@ -46,6 +46,10 @@ class MultipleModelsDetectedError(Exception):
 
 
 class SwitchModelNotDetectedError(Exception):
+    """None of the models passed the tests."""
+
+
+class EmptyTemplateParameterError(Exception):
     """None of the models passed the tests."""
 
 
@@ -503,13 +507,18 @@ class NetgearSwitchConnector:
         for key, value in template["params"].items():
             try:
                 data[key] = getattr(self, value)
-            except AttributeError:
-                _LOGGER.warning(
+            except AttributeError as error:
+                message = (
                     "NetgearSwitchConnector._set_data_from_template: "
-                    "missing attribute %s (class variable %s)",
-                    key,
-                    value,
+                    f"missing attribute {key} (class variable {value})"
                 )
+                raise EmptyTemplateParameterError(message) from error
+            if not data[key]:
+                message = (
+                    "NetgearSwitchConnector._set_data_from_template: "
+                    f"empty attribute {key} (class variable {value})"
+                )
+                raise EmptyTemplateParameterError(message)
 
     def _parse_poe_port_config(self, tree: HtmlElement) -> dict:
         config_by_port = {}
