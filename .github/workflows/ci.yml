@@ -49,5 +49,5 @@ jobs:
         if: contains(github.ref, 'refs/tags')
 
       - name: Publish package
-        uses: pypa/gh-action-pypi-publish@v1.12.2
+        uses: pypa/gh-action-pypi-publish@v1.12.3
         if: contains(github.ref, 'refs/tags')
