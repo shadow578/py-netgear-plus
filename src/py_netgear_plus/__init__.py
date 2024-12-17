@@ -14,7 +14,7 @@ from . import models, netgear_crypt
 from .fetcher import BaseResponse, PageNotLoadedError
 from .parsers import PageParser, create_page_parser
 
-__version__ = "0.2.13rc1"
+__version__ = "0.2.14"
 
 SWITCH_STATES = ["on", "off"]
 DEFAULT_PAGE = "index.htm"
@@ -850,11 +850,7 @@ class NetgearSwitchConnector:
         if poe_port in self.poe_ports:
             for template in self.switch_model.SWITCH_POE_PORT_TEMPLATES:
                 url = template["url"].format(ip=self.host)
-                data = {
-                    "ACTION": "Apply",
-                    "portID": poe_port - 1,
-                    "ADMIN_MODE": 1 if state == "on" else 0,
-                }
+                data = self.switch_model.get_switch_poe_port_data(poe_port, state)  # type: ignore[report-call-issue]
                 self._set_data_from_template(template, data)
                 _LOGGER.debug("switch_poe_port data=%s", data)
                 resp = self._request("post", url, data=data)
@@ -882,10 +878,7 @@ class NetgearSwitchConnector:
         if poe_port in self.poe_ports:
             for template in self.switch_model.CYCLE_POE_PORT_TEMPLATES:
                 url = template["url"].format(ip=self.host)
-                data = {
-                    "ACTION": "Reset",
-                    "port" + str(poe_port - 1): "checked",
-                }
+                data = self.switch_model.get_power_cycle_poe_port_data(poe_port)  # type: ignore[report-call-issue]
                 self._set_data_from_template(template, data)
                 resp = self._request(template["method"], url, data=data)
                 if (

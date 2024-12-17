@@ -3,6 +3,10 @@
 from typing import ClassVar
 
 
+class PortNumberOutofRangeError(Exception):
+    """Port number out of range."""
+
+
 class AutodetectedSwitchModel:
     """Netgear Plus Switch Model Definition."""
 
@@ -58,6 +62,14 @@ class AutodetectedSwitchModel:
     def get_autodetect_funcs(self) -> list:
         """Return list with detection functions."""
         return self.CHECKS_AND_RESULTS
+
+    def get_switch_poe_port_data(self, poe_port: int, state: str) -> dict:  # noqa: ARG002
+        """Return empty dict. Implement on model level."""
+        return {}
+
+    def get_power_cycle_poe_port_data(self, poe_port: int) -> dict:  # noqa: ARG002
+        """Return empty dict. Implement on model level."""
+        return {}
 
 
 class GS105E(AutodetectedSwitchModel):
@@ -148,6 +160,21 @@ class GS30xSeries(AutodetectedSwitchModel):
         {"method": "get", "url": "http://{ip}/getPoePortStatus.cgi"}
     ]
 
+    def get_switch_poe_port_data(self, poe_port: int, state: str) -> dict:
+        """Fill dict with form fields for switching a PoE port."""
+        return {
+            "ACTION": "Apply",
+            "portID": poe_port - 1,
+            "ADMIN_MODE": 1 if state == "on" else 0,
+        }
+
+    def get_power_cycle_poe_port_data(self, poe_port: int) -> dict:
+        """Return empty dict. Implement on model level."""
+        return {
+            "ACTION": "Reset",
+            "port" + str(poe_port - 1): "checked",
+        }
+
 
 class GS305EP(GS30xSeries):
     """Definition for Netgear GS305EP model."""
@@ -235,7 +262,14 @@ class GS316EP(GS30xSeries):
     ]
     SWITCH_POE_PORT_TEMPLATES: ClassVar = [
         {
-            "method": "get",
+            "method": "post",
+            "url": "http://{ip}/iss/specific/poePortConf.html",
+            "params": {"Gambit": "cookie_content"},
+        }
+    ]
+    CYCLE_POE_PORT_TEMPLATES: ClassVar = [
+        {
+            "method": "post",
             "url": "http://{ip}/iss/specific/poePortConf.html",
             "params": {"Gambit": "cookie_content"},
         }
@@ -254,6 +288,32 @@ class GS316EP(GS30xSeries):
             "params": {"Gambit": "cookie_content"},
         }
     ]
+
+    def get_switch_poe_port_data(self, poe_port: int, state: str) -> dict:
+        """Fill dict with form fields for switching a PoE port."""
+        return {
+            "TYPE": "submitPoe",
+            "PORT_NO": poe_port - 1,
+            "POWER_LIMIT_VALUE": 300,
+            "PRIORITY": "NOTSET",
+            "PWER_MODE": "NOTSET",
+            "POWER_LIMIT_TYPE": "NOTSET",
+            "DETECTION": "NOTSET",
+            "ADMIN_STATE": 1 if state == "on" else 0,
+            "DISCONNECT_TYPE": "NOTSET",
+        }
+
+    def get_power_cycle_poe_port_data(self, poe_port: int) -> dict:
+        """Return form fields for PoE port cycle."""
+        if poe_port not in self.POE_PORTS:
+            message = f"Port number {poe_port} out of range."
+            raise PortNumberOutofRangeError(message)
+        poeport_string = ["0"] * len(self.POE_PORTS)
+        poeport_string[poe_port - 1] = "1"
+        return {
+            "TYPE": "resetPoe",
+            "PoePort": "".join(poeport_string),
+        }
 
 
 class GS316EPP(GS316EP):
