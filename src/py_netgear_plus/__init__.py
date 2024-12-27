@@ -14,7 +14,7 @@ from . import models, netgear_crypt
 from .fetcher import BaseResponse, PageNotLoadedError
 from .parsers import PageParser, create_page_parser
 
-__version__ = "0.2.14rc0"
+__version__ = "0.2.15rc0"
 
 SWITCH_STATES = ["on", "off"]
 DEFAULT_PAGE = "index.htm"
@@ -406,7 +406,7 @@ class NetgearSwitchConnector:
 
     def _is_authenticated(self, response: requests.Response | BaseResponse) -> bool:
         """Check for redirect to login when not authenticated (anymore)."""
-        if "content" in dir(response):
+        if "content" in dir(response) and response.content:
             title = html.fromstring(response.content).xpath("//title")
             if len(title) and title[0].text.lower() == "redirect to login":
                 _LOGGER.warning(

@@ -301,7 +301,7 @@ class GS316EP(GS30xSeries):
             "PORT_NO": poe_port - 1,
             "POWER_LIMIT_VALUE": 300,
             "PRIORITY": "NOTSET",
-            "PWER_MODE": "NOTSET",
+            "POWER_MODE": "NOTSET",
             "POWER_LIMIT_TYPE": "NOTSET",
             "DETECTION": "NOTSET",
             "ADMIN_STATE": 1 if state == "on" else 0,
