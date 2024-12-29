@@ -230,8 +230,8 @@ class GS316EP(GS30xSeries):
         14,
         15,
     ]
-    POE_MAX_POWER_ALL_PORTS = None  # 180
-    POE_MAX_POWER_SINGLE_PORT = None  # 30
+    POE_MAX_POWER_ALL_PORTS = 180
+    POE_MAX_POWER_SINGLE_PORT = 30
     POE_SCHEDULING = False  # True
     CHECKS_AND_RESULTS: ClassVar = [
         ("check_login_form_rand", [True]),
@@ -298,7 +298,7 @@ class GS316EP(GS30xSeries):
         """Fill dict with form fields for switching a PoE port."""
         return {
             "TYPE": "submitPoe",
-            "PORT_NO": poe_port - 1,
+            "PORT_NO": poe_port,
             "POWER_LIMIT_VALUE": 300,
             "PRIORITY": "NOTSET",
             "POWER_MODE": "NOTSET",
