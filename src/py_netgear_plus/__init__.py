@@ -14,7 +14,7 @@ from . import models, netgear_crypt
 from .fetcher import BaseResponse, PageNotLoadedError
 from .parsers import PageParser, create_page_parser
 
-__version__ = "0.2.15rc2"
+__version__ = "0.2.15rc3"
 
 SWITCH_STATES = ["on", "off"]
 DEFAULT_PAGE = "index.htm"
@@ -816,8 +816,8 @@ class NetgearSwitchConnector:
                     switch_data[f"port_{port_number}_connection_speed"] = 0
             else:
                 message = (
-                    "Number of statusses (%d) not equal to number of ports(%d)"
-                    % (len(port_status), self.ports)
+                    f"Number of statusses ({len(port_status)})"
+                    f" not equal to number of ports({self.ports})"
                 )
                 raise InvalidPortStatusError(message)
         return switch_data
