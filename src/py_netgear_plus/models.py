@@ -210,7 +210,7 @@ class GS308EP(GS30xSeries):
 class GS316EP(GS30xSeries):
     """Definition for Netgear GS316EP model."""
 
-    SUPPORTED = False
+    SUPPORTED = True
     MODEL_NAME = "GS316EP"
     PORTS = 16
     POE_PORTS: ClassVar = [

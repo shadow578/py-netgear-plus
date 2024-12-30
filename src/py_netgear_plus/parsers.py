@@ -15,6 +15,8 @@ API_V2_CHECKS = {
     "firmware": ["V2.06.24GR", "V2.06.24EN"],
 }
 
+POE_PORT_ENABLED_STATUS = ["enable", "aktiv"]
+
 
 def create_page_parser(switch_model: str) -> Any:
     """Return the parser for the switch model."""
@@ -246,6 +248,12 @@ class PageParser:
         """Parse PoE port configuration from the html page."""
         raise NotImplementedError
 
+    def parse_poe_port_status(
+        self, page: requests.Response | BaseResponse
+    ) -> dict[str, Any]:
+        """Parse PoE port status from the html page."""
+        raise NotImplementedError
+
 
 class GS105E(PageParser):
     """Parser for the GS105E switch."""
@@ -383,6 +391,50 @@ class GS30xSeries(PageParser):
             "speed_io": io_zeros,
         }
 
+    def parse_poe_port_config(
+        self, page: requests.Response | BaseResponse
+    ) -> dict[str, Any]:
+        """Parse PoE port configuration from the html page."""
+        switch_data = {}
+        tree = html.fromstring(page.content)
+        poe_port_config = {}
+        poe_port_power_x = tree.xpath('//input[@id="hidPortPwr"]')
+        for i, x in enumerate(poe_port_power_x):
+            poe_port_config[i + 1] = "on" if x.value == "1" else "off"
+
+        for poe_port_nr, poe_power_config in poe_port_config.items():
+            switch_data[f"port_{poe_port_nr}_poe_power_active"] = poe_power_config
+        return switch_data
+
+    def parse_poe_port_status(
+        self, page: requests.Response | BaseResponse
+    ) -> dict[str, Any]:
+        """Parse PoE port status from the html page."""
+        switch_data = {}
+        tree = html.fromstring(page.content)
+        poe_output_power = {}
+        # Port name:
+        #   //li[contains(@class,"poe_port_list_item")]
+        #       //span[contains(@class,"poe_index_li_title")]
+        # Power mode:
+        #   //li[contains(@class,"poe_port_list_item")]
+        #       //span[contains(@class,"poe-power-mode")]
+        # Port status:
+        #   //li[contains(@class,"poe_port_list_item")]
+        #       //div[contains(@class,"poe_port_status")]
+        poe_output_power_x = tree.xpath(
+            '//li[contains(@class,"poe_port_list_item")]//div[contains(@class,"poe_port_status")]'
+        )
+        for i, x in enumerate(poe_output_power_x):
+            try:
+                poe_output_power[i + 1] = float(x.xpath(".//span")[5].text)
+            except ValueError:
+                poe_output_power[i + 1] = 0.0
+
+        for poe_port_nr, poe_power_status in poe_output_power.items():
+            switch_data[f"port_{poe_port_nr}_poe_output_power"] = poe_power_status
+        return switch_data
+
 
 class GS305EP(GS30xSeries):
     """Parser for the GS305EP switch."""
@@ -503,6 +555,45 @@ class GS31xSeries(PageParser):
             "crc_errors": crc,
             "speed_io": io_zeros,
         }
+
+    def parse_poe_port_config(
+        self, page: requests.Response | BaseResponse
+    ) -> dict[str, Any]:
+        """Parse PoE port configuration from the html page."""
+        switch_data = {}
+        tree = html.fromstring(page.content)
+        poe_port_config = {}
+        poe_port_admin_state_x = tree.xpath(
+            '//div[@id="devicesContainer"]//div[contains(@class,"port-wrap")]//span[contains(@class,"admin-state")]'
+        )
+        for i, x in enumerate(poe_port_admin_state_x):
+            poe_port_config[i + 1] = (
+                "on" if x.text.lower() in POE_PORT_ENABLED_STATUS else "off"
+            )
+
+        for poe_port_nr, poe_power_config in poe_port_config.items():
+            switch_data[f"port_{poe_port_nr}_poe_power_active"] = poe_power_config
+        return switch_data
+
+    def parse_poe_port_status(
+        self, page: requests.Response | BaseResponse
+    ) -> dict[str, Any]:
+        """Parse PoE port status from the html page."""
+        switch_data = {}
+        tree = html.fromstring(page.content)
+        poe_output_power = {}
+        poe_output_power_x = tree.xpath(
+            '//div[contains(@class,"port-wrap")]//p[contains(@class,"OutputPower-text")]'
+        )
+        for i, x in enumerate(poe_output_power_x):
+            try:
+                poe_output_power[i + 1] = float(x.text)
+            except ValueError:
+                poe_output_power[i + 1] = 0.0
+
+        for poe_port_nr, poe_power_status in poe_output_power.items():
+            switch_data[f"port_{poe_port_nr}_poe_output_power"] = poe_power_status
+        return switch_data
 
 
 class GS316EP(GS31xSeries):

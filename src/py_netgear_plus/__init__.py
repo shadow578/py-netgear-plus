@@ -14,7 +14,7 @@ from . import models, netgear_crypt
 from .fetcher import BaseResponse, PageNotLoadedError
 from .parsers import PageParser, create_page_parser
 
-__version__ = "0.2.15rc1"
+__version__ = "0.2.15rc2"
 
 SWITCH_STATES = ["on", "off"]
 DEFAULT_PAGE = "index.htm"
@@ -51,6 +51,10 @@ class SwitchModelNotDetectedError(Exception):
 
 class EmptyTemplateParameterError(Exception):
     """None of the models passed the tests."""
+
+
+class InvalidPortStatusError(Exception):
+    """Number of statusses do not match number of ports."""
 
 
 class InvalidSwitchStateError(Exception):
@@ -528,34 +532,6 @@ class NetgearSwitchConnector:
                 )
                 raise EmptyTemplateParameterError(message)
 
-    def _parse_poe_port_config(self, tree: HtmlElement) -> dict:
-        config_by_port = {}
-        poe_port_power_x = tree.xpath('//input[@id="hidPortPwr"]')
-        for i, x in enumerate(poe_port_power_x):
-            config_by_port[i + 1] = "on" if x.value == "1" else "off"
-        return config_by_port
-
-    def _parse_poe_port_status(self, tree: HtmlElement) -> dict:
-        poe_output_power = {}
-        # Port name:
-        #   //li[contains(@class,"poe_port_list_item")]
-        #       //span[contains(@class,"poe_index_li_title")]
-        # Power mode:
-        #   //li[contains(@class,"poe_port_list_item")]
-        #       //span[contains(@class,"poe-power-mode")]
-        # Port status:
-        #   //li[contains(@class,"poe_port_list_item")]
-        #       //div[contains(@class,"poe_port_status")]
-        poe_output_power_x = tree.xpath(
-            '//li[contains(@class,"poe_port_list_item")]//div[contains(@class,"poe_port_status")]'
-        )
-        for i, x in enumerate(poe_output_power_x):
-            try:
-                poe_output_power[i + 1] = float(x.xpath(".//span")[5].text)
-            except ValueError:
-                poe_output_power[i + 1] = 0.0
-        return poe_output_power
-
     def _get_gs3xx_switch_info(self, tree: HtmlElement, text: str) -> str:
         span_node = tree.xpath(f'//span[text()="{text}"]')
         if span_node:
@@ -605,6 +581,8 @@ class NetgearSwitchConnector:
             return switch_data
 
         if isinstance(self.switch_model, (models.GS30xSeries)):
+            time.sleep(self.sleep_time)
+            switch_data.update(self._get_poe_port_config())
             time.sleep(self.sleep_time)
             switch_data.update(self._get_poe_port_status())
 
@@ -803,26 +781,13 @@ class NetgearSwitchConnector:
         switch_data["sum_port_crc_errors"] = current_data["sum_port_crc_errors"]
         return switch_data
 
+    def _get_poe_port_config(self) -> dict:
+        response = self.fetch_page(self.switch_model.POE_PORT_CONFIG_TEMPLATES)
+        return self.page_parser.parse_poe_port_config(response)
+
     def _get_poe_port_status(self) -> dict:
-        switch_data = {}
-        response_poeportconfig = self.fetch_page(
-            self.switch_model.POE_PORT_CONFIG_TEMPLATES
-        )
-        tree_poeportconfig = html.fromstring(response_poeportconfig.content)
-        poe_port_config = self._parse_poe_port_config(tree=tree_poeportconfig)
-
-        for poe_port_nr, poe_power_config in poe_port_config.items():
-            switch_data[f"port_{poe_port_nr}_poe_power_active"] = poe_power_config
-        time.sleep(self.sleep_time)
-        response_poeportstatus = self.fetch_page(
-            self.switch_model.POE_PORT_STATUS_TEMPLATES
-        )
-        tree_poeportstatus = html.fromstring(response_poeportstatus.content)
-        poe_port_status = self._parse_poe_port_status(tree=tree_poeportstatus)
-
-        for poe_port_nr, poe_power_status in poe_port_status.items():
-            switch_data[f"port_{poe_port_nr}_poe_output_power"] = poe_power_status
-        return switch_data
+        response = self.fetch_page(self.switch_model.POE_PORT_STATUS_TEMPLATES)
+        return self.page_parser.parse_poe_port_status(response)
 
     def _get_port_status(self) -> dict:
         switch_data = {}
@@ -849,6 +814,12 @@ class NetgearSwitchConnector:
                     )
                 else:
                     switch_data[f"port_{port_number}_connection_speed"] = 0
+            else:
+                message = (
+                    "Number of statusses (%d) not equal to number of ports(%d)"
+                    % (len(port_status), self.ports)
+                )
+                raise InvalidPortStatusError(message)
         return switch_data
 
     def switch_poe_port(self, poe_port: int, state: str) -> bool:
