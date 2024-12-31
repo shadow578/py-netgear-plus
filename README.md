@@ -47,16 +47,25 @@ some basic configuration updates.
 | GS305EP  | 5     | V1.0.1.1                               |                     |
 | GS308EP  | 8     | V1.0.0.10, V1.0.1.4                    |                     |
 | GS308EPP | 8     | ?                                      |                     |
+| GS316EP  | 16    | V1.0.4.4                               |                     |
+| GS316EPP | 16    | V1.0.4.4                               |                     |
 
 Supported firmware languages: GR (German), EN (English)
 
 # Unsupported models
 
-| Model     | Support status                                         |
-| --------- | ------------------------------------------------------ |
-| GS108PEv3 | Not yet started                                        |
-| GS316EP   | Login is supported, statistics and PoE control not yet |
-| GS316EPP  | Login is supported, statistics and PoE control not yet |
+| Model     | Support status  |
+| --------- | --------------- |
+| GS108PEv3 | Not yet started |
+
+## CLI usage
+
+```shell
+export NETGEAR_PLUS_PASSWORD=s3cr3t # replace with your password
+ngp-cli login 192.168.178.68 # replace with IP address of your switch
+ngp-cli status
+ngp-cli -h
+```
 
 ## Library Usage
 
