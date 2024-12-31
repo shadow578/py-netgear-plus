@@ -14,7 +14,7 @@ from . import models, netgear_crypt
 from .fetcher import BaseResponse, PageNotLoadedError
 from .parsers import PageParser, create_page_parser
 
-__version__ = "0.2.15rc3"
+__version__ = "0.3.0"
 
 SWITCH_STATES = ["on", "off"]
 DEFAULT_PAGE = "index.htm"
