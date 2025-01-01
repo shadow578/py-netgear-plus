@@ -7,6 +7,7 @@ from unittest.mock import Mock, patch
 import pytest
 from py_netgear_plus import (
     DEFAULT_PAGE,
+    URL_REQUEST_TIMEOUT,
     NetgearSwitchConnector,
     _from_bytes_to_megabytes,
     requests,
@@ -87,8 +88,6 @@ def test_0_netgear_switch_connector_initialization() -> None:
     assert connector.sleep_time == 0.25
     assert connector._login_page_response is not None
     assert connector._login_page_form_password == ""
-    assert connector.cookie_name is None
-    assert connector.cookie_content is None
     assert connector._client_hash == ""
     assert connector._previous_data == {}
     assert connector._loaded_switch_metadata == {}
@@ -221,10 +220,11 @@ def test_get_login_cookie_by_model(
             connector.switch_model.LOGIN_TEMPLATE["url"].format(ip=connector.host),
             data=data,
             allow_redirects=True,
-            timeout=connector.LOGIN_URL_REQUEST_TIMEOUT,
+            timeout=URL_REQUEST_TIMEOUT,
         )
-        assert connector.cookie_name is not None
-        assert connector.cookie_content == "cookie_value"
+        (cookie_name, cookie_value) = connector.get_cookie()
+        assert cookie_name is not None
+        assert cookie_value == "cookie_value"
 
 
 @pytest.mark.parametrize(
@@ -244,7 +244,7 @@ def test_is_authenticated(page: str, expected: bool) -> None:  # noqa: FBT001
     response = Mock()
     response.content = Path(f"pages/{page}").read_text()
     response.status_code = requests.codes.ok
-    assert connector._is_authenticated(response) is expected
+    assert connector._page_fetcher._is_authenticated(response) is expected
 
 
 @pytest.mark.parametrize(

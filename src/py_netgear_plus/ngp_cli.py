@@ -59,10 +59,11 @@ def save_cookie(
 ) -> bool:
     """Save the authentication cookie and host to a file."""
     with Path(filename).open("w") as f:
+        (cookie_name, cookie_content) = connector.get_cookie()
         json.dump(
             {
-                "cookie_name": connector.cookie_name,
-                "cookie_content": connector.cookie_content,
+                "cookie_name": cookie_name,
+                "cookie_content": cookie_content,
                 "host": connector.host,
             },
             f,
@@ -78,8 +79,7 @@ def load_cookie(
     if Path(filename).exists():
         with Path(filename).open("r") as f:
             data = json.load(f)
-            connector.cookie_name = data.get("cookie_name")
-            connector.cookie_content = data.get("cookie_content")
+            connector.set_cookie(data.get("cookie_name"), data.get("cookie_content"))
             connector.host = data.get("host")
             return True
     return False

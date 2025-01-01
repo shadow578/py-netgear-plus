@@ -3,6 +3,14 @@
 from typing import ClassVar
 
 
+class MultipleModelsDetectedError(Exception):
+    """Detection of switch model was not unique."""
+
+
+class SwitchModelNotDetectedError(Exception):
+    """None of the models passed the tests."""
+
+
 class PortNumberOutofRangeError(Exception):
     """Port number out of range."""
 
