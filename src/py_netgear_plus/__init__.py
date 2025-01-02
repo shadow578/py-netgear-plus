@@ -6,8 +6,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from requests import Response
-from requests.exceptions import ConnectionError
+from requests import Response, exceptions
 
 from . import models, netgear_crypt
 from .fetcher import (
@@ -350,7 +349,7 @@ class NetgearSwitchConnector:
         """Only used while testing. Prevents "Maximum number of sessions" error."""
         try:
             response = self.fetch_page(self.switch_model.LOGOUT_TEMPLATES)
-        except ConnectionError:
+        except exceptions.ConnectionError:
             self._page_fetcher.clear_cookie()
             return True
         else:
