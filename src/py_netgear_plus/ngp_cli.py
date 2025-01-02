@@ -268,7 +268,6 @@ def logout_command(
     if not load_cookie(connector):
         print("Not logged in.", file=stderr)  # noqa: T201
         return False
-    connector.autodetect_model()
     Path(COOKIE_FILE).unlink()
     if connector.delete_login_cookie():
         return True

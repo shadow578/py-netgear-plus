@@ -11,7 +11,7 @@ from lxml import html
 from py_netgear_plus.models import AutodetectedSwitchModel, SwitchModelNotDetectedError
 
 DEFAULT_PAGE = "index.htm"
-LOGIN_URL_REQUEST_TIMEOUT = 15
+URL_REQUEST_TIMEOUT = 15
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -103,7 +103,7 @@ class PageFetcher:
             )
         return response
 
-    def get_login_page(
+    def get_login_response(
         self, switch_model: type[AutodetectedSwitchModel], login_password: str
     ) -> requests.Response:
         """Login and save returned cookie."""
@@ -124,7 +124,7 @@ class PageFetcher:
             url,
             data={key: login_password},
             allow_redirects=True,
-            timeout=LOGIN_URL_REQUEST_TIMEOUT,
+            timeout=URL_REQUEST_TIMEOUT,
         )
         if not response or response.status_code != requests.codes.ok:
             raise LoginFailedError
@@ -136,7 +136,7 @@ class PageFetcher:
         if "content" in dir(response) and response.content:
             title = html.fromstring(response.content).xpath("//title")
             if len(title) and title[0].text.lower() == "redirect to login":
-                _LOGGER.warning(
+                _LOGGER.info(
                     "[NetgearSwitchConnector._is_authenticated]"
                     " Returning false: title=%s",
                     title[0].text.lower(),
@@ -146,7 +146,7 @@ class PageFetcher:
                 '//script[contains(text(),"/wmi/login")]'
             )
             if len(script) and 'top.location.href = "/wmi/login"' in script[0].text:
-                _LOGGER.warning(
+                _LOGGER.info(
                     "[NetgearSwitchConnector._is_authenticated]"
                     " Returning false: script=%s",
                     script[0].text,
@@ -161,20 +161,27 @@ class PageFetcher:
         data: Any = None,
         timeout: int = 0,
         allow_redirects: bool = False,  # noqa: FBT001, FBT002
-    ) -> requests.Response:
+    ) -> requests.Response | BaseResponse:
         """Make authenticated requests with requests.request."""
-        if not self._cookie_name or not self._cookie_content:
-            raise NotLoggedInError
+        if self.offline_mode:
+            return self.get_page_from_file(url)
         if timeout == 0:
-            timeout = LOGIN_URL_REQUEST_TIMEOUT
+            timeout = URL_REQUEST_TIMEOUT
         jar = requests.cookies.RequestsCookieJar()
         if self._cookie_name and self._cookie_content:
             jar.set(self._cookie_name, self._cookie_content, domain=self.host, path="/")
-        _LOGGER.debug(
-            "[PageFetcher.request] calling requests.%s for url=%s",
-            method,
-            url,
-        )
+            _LOGGER.debug(
+                "[PageFetcher.request] calling %s %s with %s cookie",
+                method.upper(),
+                url,
+                self._cookie_name,
+            )
+        else:
+            _LOGGER.debug(
+                "[PageFetcher.request] calling %s %s without cookie",
+                method.upper(),
+                url,
+            )
         response = requests.Response()
         data_key = "data" if method == "post" else "params"
         kwargs = {
@@ -193,3 +200,7 @@ class PageFetcher:
         ):
             raise NotLoggedInError
         return response
+
+    def has_ok_status(self, response: requests.Response | BaseResponse) -> bool:
+        """Check if response has status code 200."""
+        return response.status_code == requests.codes.ok

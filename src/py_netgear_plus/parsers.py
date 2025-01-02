@@ -106,7 +106,54 @@ class PageParser:
         self._switch_firmware = None
         self._switch_bootloader = None
         self._port_status = {}
-        _LOGGER.debug("%s(PageParser) object initialized.", self.__class__.__name__)
+        _LOGGER.debug("%s object initialized.", self.__class__.__name__)
+
+    def parse_login_form_rand(
+        self, page: requests.Response | BaseResponse
+    ) -> str | None:
+        """Return rand value from login page if present."""
+        if page is None or not page.content:
+            return None
+        tree = html.fromstring(page.content)
+        input_rand_elems = tree.xpath('//input[@id="rand"]')
+        if input_rand_elems:
+            return input_rand_elems[0].value
+        return None
+
+    def parse_login_title_tag(
+        self, page: requests.Response | BaseResponse
+    ) -> str | None:
+        """Return the title tag from the login page."""
+        if page is None or not page.content:
+            return None
+        tree = html.fromstring(page.content)
+        title_elems = tree.xpath("//title")
+        if title_elems:
+            return title_elems[0].text.replace("NETGEAR", "").strip()
+        return None
+
+    def parse_login_switchinfo_tag(
+        self, page: requests.Response | BaseResponse
+    ) -> str | None:
+        """Return the title tag from the login page."""
+        if page is None or not page.content:
+            return None
+        tree = html.fromstring(page.content)
+        switchinfo_elems = tree.xpath('//div[@class="switchInfo"]')
+        if switchinfo_elems:
+            return switchinfo_elems[0].text
+        return None
+
+    def parse_gambit_tag(self, page: requests.Response | BaseResponse) -> str | None:
+        """Parse Gambit form element."""
+        # GS31xEP(P) series switches return the cookie value in a hidden form element
+        if page is None or not page.content:
+            return None
+        tree = html.fromstring(page.content)
+        gambit_elems = tree.xpath('//input[@name="Gambit"]')
+        if gambit_elems:
+            return gambit_elems[0].text
+        return None
 
     def has_api_v2(self) -> bool:
         """Check if the switch has API v2."""
@@ -253,6 +300,14 @@ class PageParser:
     ) -> dict[str, Any]:
         """Parse PoE port status from the html page."""
         raise NotImplementedError
+
+    def parse_error(self, page: requests.Response | BaseResponse) -> str | None:
+        """Parse error from the html page."""
+        tree = html.fromstring(page.content)
+        error_msg = tree.xpath('//input[@id="err_msg"]')
+        if error_msg:
+            return error_msg[0].value
+        return None
 
 
 class GS105E(PageParser):
@@ -434,6 +489,14 @@ class GS30xSeries(PageParser):
         for poe_port_nr, poe_power_status in poe_output_power.items():
             switch_data[f"port_{poe_port_nr}_poe_output_power"] = poe_power_status
         return switch_data
+
+    def parse_error(self, page: requests.Response | BaseResponse) -> str | None:
+        """Parse error from the html page."""
+        tree = html.fromstring(page.content)
+        error_msg = tree.xpath('//div[@class="pwdErrStyle"]')
+        if error_msg:
+            return error_msg[0].text
+        return None
 
 
 class GS305EP(GS30xSeries):

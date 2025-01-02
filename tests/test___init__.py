@@ -5,12 +5,12 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
+import requests
 from py_netgear_plus import (
     DEFAULT_PAGE,
     URL_REQUEST_TIMEOUT,
     NetgearSwitchConnector,
     _from_bytes_to_megabytes,
-    requests,
 )
 from py_netgear_plus.models import GS308EP, GS316EPP, AutodetectedSwitchModel, GS108Ev3
 from py_netgear_plus.netgear_crypt import make_md5, merge
@@ -101,7 +101,7 @@ def test_autodetect_model(switch_model: type[AutodetectedSwitchModel]) -> None:
     """Test autodetect_model method."""
     page_fetcher = PageFetcher(switch_model)
     connector = NetgearSwitchConnector(host="192.168.0.1", password="password")
-    with patch("py_netgear_plus.requests.request") as mock_request:
+    with patch("py_netgear_plus.fetcher.requests.request") as mock_request:
         mock_response = Mock()
         with page_fetcher.get_path(switch_model.AUTODETECT_TEMPLATES).open() as file:
             mock_response.content = file.read()
@@ -119,13 +119,13 @@ def test_autodetect_model(switch_model: type[AutodetectedSwitchModel]) -> None:
 def test_check_login_url(switch_model: type[AutodetectedSwitchModel]) -> None:
     """Test check_login_url method."""
     connector = NetgearSwitchConnector(host="192.168.0.1", password="password")
-    with patch("py_netgear_plus.requests.get") as mock_get:
+    with patch("py_netgear_plus.fetcher.requests.request") as mock_request:
         mock_response = Mock()
         page_name = switch_model.LOGIN_TEMPLATE["url"].split("/")[-1] or DEFAULT_PAGE
         with Path(f"pages/{switch_model.MODEL_NAME}/0/{page_name}").open() as file:
             mock_response.content = file.read()
         mock_response.status_code = requests.codes.ok
-        mock_get.return_value = mock_response
+        mock_request.return_value = mock_response
         assert connector.check_login_url() is True
         assert connector._login_page_response == mock_response
 
@@ -147,7 +147,7 @@ def test_check_login_form_rand(
     with Path(f"pages/{switch_model.MODEL_NAME}/0/{page_name}").open() as file:
         connector._login_page_response.content = file.read()
     connector._login_page_response.status_code = requests.codes.ok
-    assert connector.check_login_form_rand() is True
+    assert connector.check_login_form_rand(connector._login_page_response) is True
     assert connector._rand == rand
     assert connector._login_page_form_password == make_md5(merge(password, rand))
 
@@ -178,13 +178,13 @@ def test_get_login_password(
     """Test get_login_password method."""
     password = "Password1"
     connector = NetgearSwitchConnector(host="192.168.0.1", password=password)
-    with patch("py_netgear_plus.requests.get") as mock_get:
+    with patch("py_netgear_plus.fetcher.requests.request") as mock_request:
         mock_response = Mock()
         page_name = switch_model.LOGIN_TEMPLATE["url"].split("/")[-1] or DEFAULT_PAGE
         with Path(f"pages/{switch_model.MODEL_NAME}/0/{page_name}").open() as file:
             mock_response.content = file.read()
         mock_response.status_code = requests.codes.ok
-        mock_get.return_value = mock_response
+        mock_request.return_value = mock_response
         connector._login_page_response = mock_response
         assert connector.get_login_password() == make_md5(merge(password, rand))
 
@@ -206,7 +206,7 @@ def test_get_login_cookie_by_model(
         ),
     }
     with (
-        patch("py_netgear_plus.requests.request") as mock_request,
+        patch("py_netgear_plus.fetcher.requests.request") as mock_request,
     ):
         mock_response = Mock()
         mock_response.status_code = requests.codes.ok
@@ -260,7 +260,7 @@ def test_get_switch_infos(switch_model: type[AutodetectedSwitchModel]) -> None:
         page_fetcher = PageFetcher(switch_model)
         mock_fetch_page.side_effect = page_fetcher.from_file
         connector = NetgearSwitchConnector(host="192.168.0.1", password="password")
-        with patch("py_netgear_plus.requests.request") as mock_request:
+        with patch("py_netgear_plus.fetcher.requests.request") as mock_request:
             mock_response = Mock()
             with page_fetcher.get_path(
                 switch_model.AUTODETECT_TEMPLATES
