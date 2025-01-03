@@ -8,6 +8,7 @@ import requests
 import requests.cookies
 from lxml import html
 
+from py_netgear_plus import netgear_crypt
 from py_netgear_plus.models import AutodetectedSwitchModel, SwitchModelNotDetectedError
 
 DEFAULT_PAGE = "index.htm"
@@ -48,6 +49,9 @@ class PageFetcher:
     def __init__(self, host: str) -> None:
         """Initialize PageFetcher Object."""
         self.host = host
+        # cached login page response
+        self._login_page_response = None
+
         # login cookie
         self._cookie_name = None
         self._cookie_content = None
@@ -64,6 +68,21 @@ class PageFetcher:
     def turn_on_online_mode(self) -> None:
         """Turn on online mode."""
         self.offline_mode = False
+
+    def check_login_url(self, switch_model: type[AutodetectedSwitchModel]) -> bool:
+        """Check and cache login page."""
+        url = switch_model.LOGIN_TEMPLATE["url"].format(ip=self.host)
+        _LOGGER.debug("[PageFetcher.check_login_url] calling request for GET %s", url)
+        self._login_page_response = self.request("get", url)
+        return self.has_ok_status(self._login_page_response)
+
+    def get_login_page_response(self) -> requests.Response | BaseResponse | None:
+        """Return cached login page."""
+        return self._login_page_response
+
+    def clear_login_page_response(self) -> None:
+        """Return cached login page."""
+        self._login_page_response = None
 
     def get_cookie(self) -> tuple[str | None, str | None]:
         """Get cookie."""
@@ -104,25 +123,33 @@ class PageFetcher:
         return response
 
     def get_login_response(
-        self, switch_model: type[AutodetectedSwitchModel], login_password: str
+        self,
+        switch_model: type[AutodetectedSwitchModel],
+        login_password: str,
+        rand: str | None,
     ) -> requests.Response:
         """Login and save returned cookie."""
         if not switch_model or switch_model.MODEL_NAME == "":
             raise SwitchModelNotDetectedError
+        password = ""
+        if not rand:
+            password = login_password
+        else:
+            password = netgear_crypt.make_md5(netgear_crypt.merge(login_password, rand))
         response = None
         template = switch_model.LOGIN_TEMPLATE
         url = template["url"].format(ip=self.host)
         method = template["method"]
         key = template["key"]
         _LOGGER.debug(
-            "[PageFetcher.get_login_page] calling requests.%s for url=%s",
-            method,
+            "[PageFetcher.get_login_page] calling request for %s %s",
+            method.upper(),
             url,
         )
         response = requests.request(
             method,
             url,
-            data={key: login_password},
+            data={key: password},
             allow_redirects=True,
             timeout=URL_REQUEST_TIMEOUT,
         )

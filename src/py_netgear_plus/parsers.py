@@ -109,7 +109,7 @@ class PageParser:
         _LOGGER.debug("%s object initialized.", self.__class__.__name__)
 
     def parse_login_form_rand(
-        self, page: requests.Response | BaseResponse
+        self, page: requests.Response | BaseResponse | None
     ) -> str | None:
         """Return rand value from login page if present."""
         if page is None or not page.content:
@@ -120,10 +120,15 @@ class PageParser:
             return input_rand_elems[0].value
         return None
 
+    def check_login_form_rand(self, page: requests.Response | BaseResponse) -> bool:
+        """Return true of rand value from login page is present."""
+        return bool(self.parse_login_form_rand(page))
+
     def parse_login_title_tag(
         self, page: requests.Response | BaseResponse
     ) -> str | None:
         """Return the title tag from the login page."""
+        """For new firmwares V2.06.10, V2.06.17, V2.06.24."""
         if page is None or not page.content:
             return None
         tree = html.fromstring(page.content)
@@ -136,6 +141,9 @@ class PageParser:
         self, page: requests.Response | BaseResponse
     ) -> str | None:
         """Return the title tag from the login page."""
+        """For old firmware V2.00.05, return """ ""
+        """or something like: "GS108Ev3 - 8-Port Gigabit ProSAFE Plus Switch"."""
+        """Newer firmwares contains that too."""
         if page is None or not page.content:
             return None
         tree = html.fromstring(page.content)

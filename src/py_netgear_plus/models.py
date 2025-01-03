@@ -87,7 +87,7 @@ class GS105E(AutodetectedSwitchModel):
     PORTS = 5
     CHECKS_AND_RESULTS: ClassVar = [
         ("check_login_form_rand", [True]),
-        ("check_login_title_tag", ["GS105E"]),
+        ("parse_login_title_tag", ["GS105E"]),
     ]
 
 
@@ -98,7 +98,7 @@ class GS105Ev2(AutodetectedSwitchModel):
     PORTS = 5
     CHECKS_AND_RESULTS: ClassVar = [
         ("check_login_form_rand", [True]),
-        ("check_login_title_tag", ["GS105Ev2"]),
+        ("parse_login_title_tag", ["GS105Ev2"]),
     ]
 
 
@@ -109,9 +109,9 @@ class GS108E(AutodetectedSwitchModel):
     PORTS = 8
     CHECKS_AND_RESULTS: ClassVar = [
         ("check_login_form_rand", [True]),
-        ("check_login_title_tag", ["GS108E"]),
+        ("parse_login_title_tag", ["GS108E"]),
         (
-            "check_login_switchinfo_tag",
+            "parse_login_switchinfo_tag",
             ["GS308E - 8-Port Gigabit Ethernet Smart Managed Plus Switch"],
         ),
     ]
@@ -125,9 +125,9 @@ class GS108Ev3(AutodetectedSwitchModel):
     PORTS = 8
     CHECKS_AND_RESULTS: ClassVar = [
         ("check_login_form_rand", [True]),
-        ("check_login_title_tag", ["GS108Ev3"]),
+        ("parse_login_title_tag", ["GS108Ev3"]),
         (
-            "check_login_switchinfo_tag",
+            "parse_login_switchinfo_tag",
             [
                 "GS108Ev3 - 8-Port Gigabit ProSAFE Plus Switch",
                 "GS108Ev3 - 8-Port Gigabit Ethernet Smart Managed Plus Switch",
@@ -198,7 +198,7 @@ class GS305EP(GS30xSeries):
     POE_MAX_POWER_ALL_PORTS = 63
     CHECKS_AND_RESULTS: ClassVar = [
         ("check_login_form_rand", [True]),
-        ("check_login_title_tag", ["GS305EP"]),
+        ("parse_login_title_tag", ["GS305EP"]),
     ]
 
 
@@ -211,7 +211,7 @@ class GS308EP(GS30xSeries):
     POE_MAX_POWER_ALL_PORTS = 62
     CHECKS_AND_RESULTS: ClassVar = [
         ("check_login_form_rand", [True]),
-        ("check_login_title_tag", ["GS308EP"]),
+        ("parse_login_title_tag", ["GS308EP"]),
     ]
 
 
@@ -242,7 +242,7 @@ class GS316EP(GS30xSeries):
     POE_SCHEDULING = False  # True
     CHECKS_AND_RESULTS: ClassVar = [
         ("check_login_form_rand", [True]),
-        ("check_login_title_tag", ["GS316EP"]),
+        ("parse_login_title_tag", ["GS316EP"]),
     ]
     LOGIN_TEMPLATE: ClassVar = {
         "method": "post",
@@ -335,7 +335,7 @@ class GS316EPP(GS316EP):
     POE_POWER_ALL_PORTS = 231
     CHECKS_AND_RESULTS: ClassVar = [
         ("check_login_form_rand", [True]),
-        ("check_login_title_tag", ["GS316EPP"]),
+        ("parse_login_title_tag", ["GS316EPP"]),
     ]
 
 

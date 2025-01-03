@@ -8,7 +8,6 @@ from typing import Any
 
 from requests import Response, exceptions
 
-from . import models, netgear_crypt
 from .fetcher import (
     BaseResponse,
     LoginFailedError,
@@ -17,13 +16,14 @@ from .fetcher import (
     PageNotLoadedError,
 )
 from .models import (
+    MODELS,
     AutodetectedSwitchModel,
     MultipleModelsDetectedError,
     SwitchModelNotDetectedError,
 )
 from .parsers import PageParser, create_page_parser
 
-__version__ = "0.3.1rc1"
+__version__ = "0.3.1rc2"
 
 DEFAULT_PAGE = "index.htm"
 MAX_AUTHENTICATION_FAILURES = 3
@@ -84,12 +84,6 @@ class NetgearSwitchConnector:
         # Login related instance variables
         # plain login password
         self._password = password
-        # response of login page request
-        self._login_page_response = BaseResponse()
-        # rand value from login page
-        self._rand = None
-        # cryped password if md5
-        self._login_page_form_password = ""
         # hash data
         self._client_hash = ""
         self._authentication_failure_count = 0
@@ -119,12 +113,12 @@ class NetgearSwitchConnector:
         """Get offline mode status."""
         return self._page_fetcher.offline_mode
 
-    def autodetect_model(self) -> type[models.AutodetectedSwitchModel]:
+    def autodetect_model(self) -> type[AutodetectedSwitchModel]:
         """Detect switch model from login page contents."""
         _LOGGER.debug(
             "[NetgearSwitchConnector.autodetect_model] called for IP=%s", self.host
         )
-        for template in models.AutodetectedSwitchModel.AUTODETECT_TEMPLATES:
+        for template in AutodetectedSwitchModel.AUTODETECT_TEMPLATES:
             url = template["url"].format(ip=self.host)
             method = template["method"]
             response = self._page_fetcher.request(
@@ -133,18 +127,15 @@ class NetgearSwitchConnector:
             )
 
             if response and self._page_fetcher.has_ok_status(response):
-                self._login_page_response = response
                 passed_checks_by_model = {}
                 matched_models = []
-                for mdl_cls in models.MODELS:
+                for mdl_cls in MODELS:
                     mdl = mdl_cls()
                     mdl_name = mdl.MODEL_NAME
                     passed_checks_by_model[mdl_name] = {}
                     autodetect_funcs = mdl.get_autodetect_funcs()
                     for func_name, expected_results in autodetect_funcs:
-                        func_result = getattr(self, func_name)(
-                            self._login_page_response
-                        )
+                        func_result = getattr(self._page_parser, func_name)(response)
                         check_successful = func_result in expected_results
                         passed_checks_by_model[mdl_name][func_name] = check_successful
 
@@ -182,7 +173,7 @@ class NetgearSwitchConnector:
         raise SwitchModelNotDetectedError
 
     def _set_instance_attributes_by_model(
-        self, switch_model: type[models.AutodetectedSwitchModel]
+        self, switch_model: type[AutodetectedSwitchModel]
     ) -> None:
         self.switch_model = switch_model
         self.ports = switch_model.PORTS
@@ -195,39 +186,6 @@ class NetgearSwitchConnector:
             "sum_rx": [0] * self.ports,
             "sum_tx": [0] * self.ports,
         }
-
-    def check_login_url(self) -> bool:
-        """Request login page and saves response, checks for HTTP Status 200."""
-        url = self.switch_model.LOGIN_TEMPLATE["url"].format(ip=self.host)
-        _LOGGER.debug(
-            "[NetgearSwitchConnector.check_login_url] calling request for url=%s", url
-        )
-        self._login_page_response = self._page_fetcher.request("get", url)
-        return self._page_fetcher.has_ok_status(self._login_page_response)
-
-    def check_login_form_rand(self, response: Response | BaseResponse) -> bool:
-        """Check if login form contain hidden *rand* input."""
-        self._rand = self._page_parser.parse_login_form_rand(response)
-        if self._rand:
-            merged = netgear_crypt.merge(self._password, self._rand)
-            md5_str = netgear_crypt.make_md5(merged)
-            self._login_page_form_password = md5_str
-            return True
-        self._login_page_form_password = self._password
-        return False
-
-    def check_login_title_tag(self, response: Response | BaseResponse) -> str | None:
-        """For new firmwares V2.06.10, V2.06.17, V2.06.24."""
-        return self._page_parser.parse_login_title_tag(response)
-
-    def check_login_switchinfo_tag(
-        self, response: Response | BaseResponse
-    ) -> str | None:
-        """Return info tag or empty when not present."""
-        """For old firmware V2.00.05, return """ ""
-        """or something like: "GS108Ev3 - 8-Port Gigabit ProSAFE Plus Switch"."""
-        """Newer firmwares contains that too."""
-        return self._page_parser.parse_login_switchinfo_tag(response)
 
     def get_unique_id(self) -> str:
         """Return unique identifier from switch model and ip address."""
@@ -244,31 +202,10 @@ class NetgearSwitchConnector:
         model_lower = self.switch_model.MODEL_NAME.lower()
         return model_lower + "_" + self.host.replace(".", "_")
 
-    def get_login_password(self) -> str:
-        """Return the password in plain text or hashed depending on the model."""
-        if self._login_page_form_password == "":
-            if not self._login_page_response or not self._login_page_response.content:
-                self.check_login_url()
-            self.check_login_form_rand(self._login_page_response)
-        if self._rand:
-            _LOGGER.debug(
-                "[NetgearSwitchConnector.get_login_password]"
-                " returning password crypted with rand=%s",
-                self._rand,
-            )
-        else:
-            _LOGGER.debug(
-                "[NetgearSwitchConnector.get_login_password]"
-                " returning password in plain text"
-            )
-        return self._login_page_form_password
-
     def _handle_soft_authentication_failure(self, response: Response) -> None:
         """Handle soft authentication failure."""
         # Clear cached login data
-        self._login_page_response = BaseResponse()
-        self._rand = ""
-        self._login_page_form_password = ""
+        self._page_fetcher.clear_login_page_response()
 
         if "content" not in dir(response):
             message = "No content in login form response."
@@ -300,9 +237,25 @@ class NetgearSwitchConnector:
         """Login and save returned cookie."""
         if not self.switch_model or self.switch_model.MODEL_NAME == "":
             self.autodetect_model()
-        login_password = self.get_login_password()
+        if not self._page_fetcher.get_login_page_response():
+            self._page_fetcher.check_login_url(self.switch_model)
+        rand = self._page_parser.parse_login_form_rand(
+            self._page_fetcher.get_login_page_response()
+        )
+
+        if rand:
+            _LOGGER.debug(
+                "[NetgearSwitchConnector.get_login_cookie]"
+                " using password crypted with rand=%s",
+                rand,
+            )
+        else:
+            _LOGGER.debug(
+                "[NetgearSwitchConnector.get_login_cookie]"
+                " using password in plain text"
+            )
         response = self._page_fetcher.get_login_response(
-            self.switch_model, login_password
+            self.switch_model, self._password, rand
         )
 
         _LOGGER.debug(
@@ -447,7 +400,7 @@ class NetgearSwitchConnector:
         if not self.switch_model.SUPPORTED:
             return switch_data
 
-        if isinstance(self.switch_model, (models.GS30xSeries)):
+        if len(self.switch_model.POE_PORTS):
             time.sleep(self.sleep_time)
             switch_data.update(self._get_poe_port_config())
             time.sleep(self.sleep_time)
