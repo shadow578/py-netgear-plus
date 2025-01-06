@@ -371,7 +371,9 @@ MODELS = [
     GS108E,
     GS108Ev3,
     GS305EP,
+    GS305EPP,
     GS308EP,
+    GS308EPP,
     GS316EP,
     GS316EPP,
 ]

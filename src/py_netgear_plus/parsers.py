@@ -499,7 +499,23 @@ class GS305EP(GS30xSeries):
         super().__init__()
 
 
+class GS305EPP(GS30xSeries):
+    """Parser for the GS305EP switch."""
+
+    def __init__(self) -> None:
+        """Initialize the GS305EP parser."""
+        super().__init__()
+
+
 class GS308EP(GS30xSeries):
+    """Parser for the GS108EP switch."""
+
+    def __init__(self) -> None:
+        """Initialize the GS308EP parser."""
+        super().__init__()
+
+
+class GS308EPP(GS30xSeries):
     """Parser for the GS108EP switch."""
 
     def __init__(self) -> None:
