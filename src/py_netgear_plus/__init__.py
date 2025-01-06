@@ -23,7 +23,7 @@ from .models import (
 )
 from .parsers import PageParser, create_page_parser
 
-__version__ = "0.3.1rc2"
+__version__ = "0.3.1rc3"
 
 DEFAULT_PAGE = "index.htm"
 MAX_AUTHENTICATION_FAILURES = 3
