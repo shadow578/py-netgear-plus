@@ -7,14 +7,22 @@ from typing import Any
 import requests
 import requests.cookies
 from lxml import html
+from requests import Response
 
-from py_netgear_plus import netgear_crypt
 from py_netgear_plus.models import AutodetectedSwitchModel, SwitchModelNotDetectedError
+from py_netgear_plus.netgear_crypt import merge_hash
 
 DEFAULT_PAGE = "index.htm"
 URL_REQUEST_TIMEOUT = 15
+status_code_ok = requests.codes.ok
+status_code_not_found = requests.codes.not_found
+status_code_no_response = requests.codes.no_response
 
 _LOGGER = logging.getLogger(__name__)
+
+
+class PageFetcherConnectionError(Exception):
+    """Connection reset while requesting page."""
 
 
 class LoginFailedError(Exception):
@@ -34,13 +42,13 @@ class BaseResponse:
 
     def __init__(self) -> None:
         """Initialize BaseResponse Object."""
-        self.status_code = requests.codes.not_found
+        self.status_code = status_code_not_found
         self.content = b""
         self.cookies = requests.cookies.RequestsCookieJar()
 
     def __bool__(self) -> bool:
         """Return True if status code is 200."""
-        return self.status_code == requests.codes.ok
+        return self.status_code == status_code_ok
 
 
 class PageFetcher:
@@ -76,7 +84,7 @@ class PageFetcher:
         self._login_page_response = self.request("get", url)
         return self.has_ok_status(self._login_page_response)
 
-    def get_login_page_response(self) -> requests.Response | BaseResponse | None:
+    def get_login_page_response(self) -> Response | BaseResponse | None:
         """Return cached login page."""
         return self._login_page_response
 
@@ -108,7 +116,7 @@ class PageFetcher:
         if path.exists():
             with path.open("r") as file:
                 response.content = file.read().encode("utf-8")
-                response.status_code = requests.codes.ok
+                response.status_code = status_code_ok
                 _LOGGER.debug(
                     "[NetgearSwitchConnector.get_page_from_file] "
                     "loaded offline page=%s",
@@ -127,15 +135,11 @@ class PageFetcher:
         switch_model: type[AutodetectedSwitchModel],
         login_password: str,
         rand: str | None,
-    ) -> requests.Response:
+    ) -> Response:
         """Login and save returned cookie."""
         if not switch_model or switch_model.MODEL_NAME == "":
             raise SwitchModelNotDetectedError
-        password = ""
-        if not rand:
-            password = login_password
-        else:
-            password = netgear_crypt.make_md5(netgear_crypt.merge(login_password, rand))
+        password = merge_hash(login_password, rand) if rand else login_password
         response = None
         template = switch_model.LOGIN_TEMPLATE
         url = template["url"].format(ip=self.host)
@@ -153,19 +157,18 @@ class PageFetcher:
             allow_redirects=True,
             timeout=URL_REQUEST_TIMEOUT,
         )
-        if not response or response.status_code != requests.codes.ok:
+        if not response or response.status_code != status_code_ok:
             raise LoginFailedError
 
         return response
 
-    def _is_authenticated(self, response: requests.Response | BaseResponse) -> bool:
+    def _is_authenticated(self, response: Response | BaseResponse) -> bool:
         """Check for redirect to login when not authenticated (anymore)."""
         if "content" in dir(response) and response.content:
             title = html.fromstring(response.content).xpath("//title")
             if len(title) and title[0].text.lower() == "redirect to login":
                 _LOGGER.info(
-                    "[NetgearSwitchConnector._is_authenticated]"
-                    " Returning false: title=%s",
+                    "[PageFetcher._is_authenticated] Returning false: title=%s",
                     title[0].text.lower(),
                 )
                 return False
@@ -174,8 +177,7 @@ class PageFetcher:
             )
             if len(script) and 'top.location.href = "/wmi/login"' in script[0].text:
                 _LOGGER.info(
-                    "[NetgearSwitchConnector._is_authenticated]"
-                    " Returning false: script=%s",
+                    "[PageFetcher._is_authenticated] Returning false: script=%s",
                     script[0].text,
                 )
                 return False
@@ -188,7 +190,7 @@ class PageFetcher:
         data: Any = None,
         timeout: int = 0,
         allow_redirects: bool = False,  # noqa: FBT001, FBT002
-    ) -> requests.Response | BaseResponse:
+    ) -> Response | BaseResponse:
         """Make authenticated requests with requests.request."""
         if self.offline_mode:
             return self.get_page_from_file(url)
@@ -209,7 +211,7 @@ class PageFetcher:
                 method.upper(),
                 url,
             )
-        response = requests.Response()
+        response = Response()
         data_key = "data" if method == "post" else "params"
         kwargs = {
             data_key: data,
@@ -221,13 +223,15 @@ class PageFetcher:
             response = requests.request(method, url, **kwargs)  # noqa: S113
         except requests.exceptions.Timeout:
             return response
+        except requests.exceptions.ConnectionError as error:
+            raise PageFetcherConnectionError from error
         # Session expired: refresh login cookie and try again
-        if response.status_code == requests.codes.ok and not self._is_authenticated(
+        if response.status_code == status_code_ok and not self._is_authenticated(
             response
         ):
             raise NotLoggedInError
         return response
 
-    def has_ok_status(self, response: requests.Response | BaseResponse) -> bool:
+    def has_ok_status(self, response: Response | BaseResponse) -> bool:
         """Check if response has status code 200."""
-        return response.status_code == requests.codes.ok
+        return response.status_code == status_code_ok

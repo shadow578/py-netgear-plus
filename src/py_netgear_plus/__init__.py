@@ -6,14 +6,16 @@ import time
 from pathlib import Path
 from typing import Any
 
-from requests import Response, exceptions
-
 from .fetcher import (
     BaseResponse,
     LoginFailedError,
     NotLoggedInError,
     PageFetcher,
+    PageFetcherConnectionError,
     PageNotLoadedError,
+    Response,
+    status_code_no_response,
+    status_code_not_found,
 )
 from .models import (
     MODELS,
@@ -21,23 +23,17 @@ from .models import (
     MultipleModelsDetectedError,
     SwitchModelNotDetectedError,
 )
-from .parsers import PageParser, create_page_parser
+from .parsers import create_page_parser
 
-__version__ = "0.3.1rc2"
+__version__ = "0.3.1rc4"
 
 DEFAULT_PAGE = "index.htm"
 MAX_AUTHENTICATION_FAILURES = 3
 PORT_STATUS_CONNECTED = ["Aktiv", "Up", "UP", "CONNECTED"]
 PORT_MODUS_SPEED = ["Auto"]
 SWITCH_STATES = ["on", "off"]
-URL_REQUEST_TIMEOUT = 15
 
 _LOGGER = logging.getLogger(__name__)
-
-API_V2_CHECKS = {
-    "bootloader": ["V1.00.03", "V2.06.01", "V2.06.02", "V2.06.03"],
-    "firmware": ["V2.06.24GR", "V2.06.24EN"],
-}
 
 
 def _from_bytes_to_megabytes(v: float) -> float:
@@ -73,7 +69,7 @@ class NetgearSwitchConnector:
         # initial values
         self.switch_model = AutodetectedSwitchModel
         self._page_fetcher = PageFetcher(host)
-        self._page_parser = PageParser()
+        self._page_parser = create_page_parser()
         self.ports = 0
         self.poe_ports = []
         self._switch_bootloader = "unknown"
@@ -300,18 +296,23 @@ class NetgearSwitchConnector:
     def delete_login_cookie(self) -> bool:
         """Logout and delete cookie."""
         """Only used while testing. Prevents "Maximum number of sessions" error."""
-        try:
-            response = self.fetch_page(self.switch_model.LOGOUT_TEMPLATES)
-        except exceptions.ConnectionError:
-            self._page_fetcher.clear_cookie()
-            return True
-        else:
-            _LOGGER.debug(
-                "[NetgearSwitchConnector.delete_login_cookie] "
-                "logout response status code=%s",
-                response.status_code,
-            )
-            return self._page_fetcher.has_ok_status(response)
+        response = BaseResponse()
+        for template in self.switch_model.LOGOUT_TEMPLATES:
+            url = template["url"].format(ip=self.host)
+            method = template["method"]
+            data = {}
+            self._set_data_from_template(template, data)
+            response = self.fetch_page(method, url, data)
+            if response.status_code != status_code_not_found:
+                break
+
+        _LOGGER.debug(
+            "[NetgearSwitchConnector.delete_login_cookie] "
+            "logout response status code=%s",
+            response.status_code,
+        )
+        self._page_fetcher.clear_cookie()
+        return response.status_code != status_code_not_found
 
     def _set_data_from_template(
         self, template: dict[str, Any], data: dict[str, Any]
@@ -335,31 +336,41 @@ class NetgearSwitchConnector:
                 )
                 raise EmptyTemplateParameterError(message)
 
-    def fetch_page(self, templates: list) -> Response | BaseResponse:
+    def fetch_page(self, method: str, url: str, data: dict) -> Response | BaseResponse:
+        """Fetch url and retry when first response is a redirect to the login page."""
+        response = BaseResponse()
+        if not self.get_offline_mode():
+            try:
+                response = self._page_fetcher.request(method, url, data)
+            except NotLoggedInError as error:
+                if self.get_login_cookie():
+                    response = self._page_fetcher.request(method, url, data)
+                else:
+                    message = "Not logged in and unable to login."
+                    raise LoginFailedError(message) from error
+            except PageFetcherConnectionError:
+                _LOGGER.warning(
+                    "NetgearSwitchConnector.fetch_page: "
+                    "caught PageFetcherConnectionError"
+                )
+                response.status_code = status_code_no_response
+        else:
+            response = self._page_fetcher.get_page_from_file(url)
+        return response
+
+    def fetch_page_from_templates(self, templates: list) -> Response | BaseResponse:
         """Return response for 1st successful request from templates."""
         response = BaseResponse()
         for template in templates:
             url = template["url"].format(ip=self.host)
-            if not self.get_offline_mode():
-                method = template["method"]
-                data = {}
-                self._set_data_from_template(template, data)
-                try:
-                    response = self._page_fetcher.request(method, url, data)
-                except NotLoggedInError as error:
-                    if self.get_login_cookie():
-                        response = self._page_fetcher.request(method, url, data)
-                    else:
-                        message = "Not logged in and unable to login."
-                        raise LoginFailedError(message) from error
-            else:
-                response = self._page_fetcher.get_page_from_file(url)
+            method = template["method"]
+            data = {}
+            self._set_data_from_template(template, data)
+            response = self.fetch_page(method, url, data)
             if self._page_fetcher.has_ok_status(response):
-                break
-        if not self._page_fetcher.has_ok_status(response):
-            message = f"Failed to load any page of templates: {templates}"
-            raise PageNotLoadedError(message)
-        return response
+                return response
+        message = f"Failed to load any page of templates: {templates}"
+        raise PageNotLoadedError(message)
 
     def get_switch_infos(self) -> dict[str, Any]:
         """Return dict with all available statistics."""
@@ -415,7 +426,7 @@ class NetgearSwitchConnector:
     def _get_switch_metadata(self) -> None:
         if not self.switch_model:
             self.autodetect_model()
-        page = self.fetch_page(self.switch_model.SWITCH_INFO_TEMPLATES)
+        page = self.fetch_page_from_templates(self.switch_model.SWITCH_INFO_TEMPLATES)
         if not page.content:
             return
 
@@ -427,7 +438,9 @@ class NetgearSwitchConnector:
         } | self._page_parser.parse_switch_metadata(page)
 
     def _get_port_statistics(self) -> dict[str, Any]:
-        response = self.fetch_page(self.switch_model.PORT_STATISTICS_TEMPLATES)
+        response = self.fetch_page_from_templates(
+            self.switch_model.PORT_STATISTICS_TEMPLATES
+        )
         return self._page_parser.parse_port_statistics(response, self.ports)
 
     def _initialize_current_data(self) -> dict:
@@ -602,16 +615,22 @@ class NetgearSwitchConnector:
         return switch_data
 
     def _get_poe_port_config(self) -> dict:
-        response = self.fetch_page(self.switch_model.POE_PORT_CONFIG_TEMPLATES)
+        response = self.fetch_page_from_templates(
+            self.switch_model.POE_PORT_CONFIG_TEMPLATES
+        )
         return self._page_parser.parse_poe_port_config(response)
 
     def _get_poe_port_status(self) -> dict:
-        response = self.fetch_page(self.switch_model.POE_PORT_STATUS_TEMPLATES)
+        response = self.fetch_page_from_templates(
+            self.switch_model.POE_PORT_STATUS_TEMPLATES
+        )
         return self._page_parser.parse_poe_port_status(response)
 
     def _get_port_status(self) -> dict:
         switch_data = {}
-        response_portstatus = self.fetch_page(self.switch_model.PORT_STATUS_TEMPLATES)
+        response_portstatus = self.fetch_page_from_templates(
+            self.switch_model.PORT_STATUS_TEMPLATES
+        )
         port_status = self._page_parser.parse_port_status(
             response_portstatus, self.ports
         )
@@ -728,7 +747,7 @@ class NetgearSwitchConnector:
         ]:
             url = template["url"].format(ip=self.host)
             try:
-                response = self.fetch_page([template])
+                response = self.fetch_page_from_templates([template])
             except PageNotLoadedError:
                 _LOGGER.warning(
                     "NetgearSwitchConnector.save_pages could not download %s", url

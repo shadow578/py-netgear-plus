@@ -3,8 +3,8 @@
 import logging
 from typing import Any
 
-import requests
 from lxml import html
+from requests import Response
 
 from .fetcher import BaseResponse
 
@@ -18,8 +18,10 @@ API_V2_CHECKS = {
 POE_PORT_ENABLED_STATUS = ["enable", "aktiv"]
 
 
-def create_page_parser(switch_model: str) -> Any:
+def create_page_parser(switch_model: str | None = None) -> Any:
     """Return the parser for the switch model."""
+    if switch_model is None:
+        return PageParser()
     if switch_model not in PARSERS:
         message = f"Model {switch_model} not supported by the parser."
         raise NetgearPlusPageParserModelNotSupportedError(message)
@@ -108,9 +110,7 @@ class PageParser:
         self._port_status = {}
         _LOGGER.debug("%s object initialized.", self.__class__.__name__)
 
-    def parse_login_form_rand(
-        self, page: requests.Response | BaseResponse | None
-    ) -> str | None:
+    def parse_login_form_rand(self, page: Response | BaseResponse | None) -> str | None:
         """Return rand value from login page if present."""
         if page is None or not page.content:
             return None
@@ -120,13 +120,11 @@ class PageParser:
             return input_rand_elems[0].value
         return None
 
-    def check_login_form_rand(self, page: requests.Response | BaseResponse) -> bool:
+    def check_login_form_rand(self, page: Response | BaseResponse) -> bool:
         """Return true of rand value from login page is present."""
         return bool(self.parse_login_form_rand(page))
 
-    def parse_login_title_tag(
-        self, page: requests.Response | BaseResponse
-    ) -> str | None:
+    def parse_login_title_tag(self, page: Response | BaseResponse) -> str | None:
         """Return the title tag from the login page."""
         """For new firmwares V2.06.10, V2.06.17, V2.06.24."""
         if page is None or not page.content:
@@ -137,9 +135,7 @@ class PageParser:
             return title_elems[0].text.replace("NETGEAR", "").strip()
         return None
 
-    def parse_login_switchinfo_tag(
-        self, page: requests.Response | BaseResponse
-    ) -> str | None:
+    def parse_login_switchinfo_tag(self, page: Response | BaseResponse) -> str | None:
         """Return the title tag from the login page."""
         """For old firmware V2.00.05, return """ ""
         """or something like: "GS108Ev3 - 8-Port Gigabit ProSAFE Plus Switch"."""
@@ -152,7 +148,7 @@ class PageParser:
             return switchinfo_elems[0].text
         return None
 
-    def parse_gambit_tag(self, page: requests.Response | BaseResponse) -> str | None:
+    def parse_gambit_tag(self, page: Response | BaseResponse) -> str | None:
         """Parse Gambit form element."""
         # GS31xEP(P) series switches return the cookie value in a hidden form element
         if page is None or not page.content:
@@ -175,9 +171,7 @@ class PageParser:
         match_firmware = self._switch_firmware in API_V2_CHECKS["firmware"]
         return match_bootloader and match_firmware
 
-    def parse_switch_metadata(
-        self, page: requests.Response | BaseResponse
-    ) -> dict[str, Any]:
+    def parse_switch_metadata(self, page: Response | BaseResponse) -> dict[str, Any]:
         """Parse switch info from the html page."""
         tree = html.fromstring(page.content)
 
@@ -198,13 +192,13 @@ class PageParser:
             "switch_firmware": self._switch_firmware,
         }
 
-    def parse_client_hash(self, page: requests.Response | BaseResponse) -> str | None:
+    def parse_client_hash(self, page: Response | BaseResponse) -> str | None:
         """Parse the client hash from the html page."""
         tree = html.fromstring(page.content)
         return get_first_value(tree, '//input[@name="hash"]')
 
     def parse_port_status(
-        self, page: requests.Response | BaseResponse, ports: int
+        self, page: Response | BaseResponse, ports: int
     ) -> dict[int, dict[str, Any]]:
         """Parse port status from the html page."""
         status_by_port = {}
@@ -244,7 +238,7 @@ class PageParser:
         return status_by_port
 
     def parse_port_statistics(
-        self, page: requests.Response | BaseResponse, ports: int
+        self, page: Response | BaseResponse, ports: int
     ) -> dict[str, Any]:
         """Parse port statistics from the html page."""
         if self.has_api_v2():
@@ -252,7 +246,7 @@ class PageParser:
         return self.parse_port_statistics_v1(page, ports)
 
     def parse_port_statistics_v1(
-        self, page: requests.Response | BaseResponse, ports: int
+        self, page: Response | BaseResponse, ports: int
     ) -> dict[str, Any]:
         """Parse port statistics from the html page."""
         tree = html.fromstring(page.content)
@@ -275,7 +269,7 @@ class PageParser:
         }
 
     def parse_port_statistics_v2(
-        self, page: requests.Response | BaseResponse, ports: int
+        self, page: Response | BaseResponse, ports: int
     ) -> dict[str, Any]:
         """Parse port status from the html page."""
         tree = html.fromstring(page.content)
@@ -297,19 +291,15 @@ class PageParser:
             "speed_io": io_zeros,
         }
 
-    def parse_poe_port_config(
-        self, page: requests.Response | BaseResponse
-    ) -> dict[str, Any]:
+    def parse_poe_port_config(self, page: Response | BaseResponse) -> dict[str, Any]:
         """Parse PoE port configuration from the html page."""
         raise NotImplementedError
 
-    def parse_poe_port_status(
-        self, page: requests.Response | BaseResponse
-    ) -> dict[str, Any]:
+    def parse_poe_port_status(self, page: Response | BaseResponse) -> dict[str, Any]:
         """Parse PoE port status from the html page."""
         raise NotImplementedError
 
-    def parse_error(self, page: requests.Response | BaseResponse) -> str | None:
+    def parse_error(self, page: Response | BaseResponse) -> str | None:
         """Parse error from the html page."""
         tree = html.fromstring(page.content)
         error_msg = tree.xpath('//input[@id="err_msg"]')
@@ -365,9 +355,7 @@ class GS30xSeries(PageParser):
         """Initialize the GS30xSeries parser."""
         super().__init__()
 
-    def parse_switch_metadata(
-        self, page: requests.Response | BaseResponse
-    ) -> dict[str, Any]:
+    def parse_switch_metadata(self, page: Response | BaseResponse) -> dict[str, Any]:
         """Parse switch info from the html page."""
         tree = html.fromstring(page.content)
 
@@ -388,7 +376,7 @@ class GS30xSeries(PageParser):
         }
 
     def parse_port_status(
-        self, page: requests.Response | BaseResponse, ports: int
+        self, page: Response | BaseResponse, ports: int
     ) -> dict[int, dict[str, Any]]:
         """Parse port status from the html page."""
         tree = html.fromstring(page.content)
@@ -420,7 +408,7 @@ class GS30xSeries(PageParser):
         return status_by_port
 
     def parse_port_statistics(
-        self, page: requests.Response | BaseResponse, ports: int
+        self, page: Response | BaseResponse, ports: int
     ) -> dict[str, Any]:
         """Parse port statistics from the html page."""
         tree = html.fromstring(page.content)
@@ -454,9 +442,7 @@ class GS30xSeries(PageParser):
             "speed_io": io_zeros,
         }
 
-    def parse_poe_port_config(
-        self, page: requests.Response | BaseResponse
-    ) -> dict[str, Any]:
+    def parse_poe_port_config(self, page: Response | BaseResponse) -> dict[str, Any]:
         """Parse PoE port configuration from the html page."""
         switch_data = {}
         tree = html.fromstring(page.content)
@@ -469,9 +455,7 @@ class GS30xSeries(PageParser):
             switch_data[f"port_{poe_port_nr}_poe_power_active"] = poe_power_config
         return switch_data
 
-    def parse_poe_port_status(
-        self, page: requests.Response | BaseResponse
-    ) -> dict[str, Any]:
+    def parse_poe_port_status(self, page: Response | BaseResponse) -> dict[str, Any]:
         """Parse PoE port status from the html page."""
         switch_data = {}
         tree = html.fromstring(page.content)
@@ -498,7 +482,7 @@ class GS30xSeries(PageParser):
             switch_data[f"port_{poe_port_nr}_poe_output_power"] = poe_power_status
         return switch_data
 
-    def parse_error(self, page: requests.Response | BaseResponse) -> str | None:
+    def parse_error(self, page: Response | BaseResponse) -> str | None:
         """Parse error from the html page."""
         tree = html.fromstring(page.content)
         error_msg = tree.xpath('//div[@class="pwdErrStyle"]')
@@ -530,9 +514,7 @@ class GS31xSeries(PageParser):
         """Initialize the GS31xSeries parser."""
         super().__init__()
 
-    def parse_switch_metadata(
-        self, page: requests.Response | BaseResponse
-    ) -> dict[str, Any]:
+    def parse_switch_metadata(self, page: Response | BaseResponse) -> dict[str, Any]:
         """Parse switch info from the html page."""
         tree = html.fromstring(page.content)
 
@@ -552,12 +534,12 @@ class GS31xSeries(PageParser):
             "switch_firmware": self._switch_firmware,
         }
 
-    def parse_client_hash(self, page: requests.Response | BaseResponse) -> str | None:  # noqa: ARG002
+    def parse_client_hash(self, page: Response | BaseResponse) -> str | None:  # noqa: ARG002
         """Return None as these switches do not have a hash value."""
         return None
 
     def parse_port_status(
-        self, page: requests.Response | BaseResponse, ports: int
+        self, page: Response | BaseResponse, ports: int
     ) -> dict[int, dict[str, Any]]:
         """Parse port status from the html page."""
         tree = html.fromstring(page.content)
@@ -590,7 +572,7 @@ class GS31xSeries(PageParser):
         return status_by_port
 
     def parse_port_statistics(
-        self, page: requests.Response | BaseResponse, ports: int
+        self, page: Response | BaseResponse, ports: int
     ) -> dict[str, Any]:
         """Parse port statistics from the html page."""
         tree = html.fromstring(page.content)
@@ -627,9 +609,7 @@ class GS31xSeries(PageParser):
             "speed_io": io_zeros,
         }
 
-    def parse_poe_port_config(
-        self, page: requests.Response | BaseResponse
-    ) -> dict[str, Any]:
+    def parse_poe_port_config(self, page: Response | BaseResponse) -> dict[str, Any]:
         """Parse PoE port configuration from the html page."""
         switch_data = {}
         tree = html.fromstring(page.content)
@@ -646,9 +626,7 @@ class GS31xSeries(PageParser):
             switch_data[f"port_{poe_port_nr}_poe_power_active"] = poe_power_config
         return switch_data
 
-    def parse_poe_port_status(
-        self, page: requests.Response | BaseResponse
-    ) -> dict[str, Any]:
+    def parse_poe_port_status(self, page: Response | BaseResponse) -> dict[str, Any]:
         """Parse PoE port status from the html page."""
         switch_data = {}
         tree = html.fromstring(page.content)

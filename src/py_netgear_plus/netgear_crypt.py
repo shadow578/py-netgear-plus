@@ -28,3 +28,8 @@ def make_md5(str2hash: str) -> str:
     """Generate an MD5 hash for the given string."""
     result = hashlib.md5(str2hash.encode())  # noqa: S324
     return result.hexdigest()
+
+
+def merge_hash(str1: str, str2: str) -> str:
+    """Return MD5 hash of merged strings."""
+    return make_md5(merge(str1, str2))

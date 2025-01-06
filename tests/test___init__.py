@@ -8,12 +8,12 @@ import pytest
 import requests
 from py_netgear_plus import (
     DEFAULT_PAGE,
-    URL_REQUEST_TIMEOUT,
     NetgearSwitchConnector,
     _from_bytes_to_megabytes,
 )
+from py_netgear_plus.fetcher import URL_REQUEST_TIMEOUT
 from py_netgear_plus.models import GS308EP, GS316EPP, AutodetectedSwitchModel, GS108Ev3
-from py_netgear_plus.netgear_crypt import make_md5, merge
+from py_netgear_plus.netgear_crypt import merge_hash
 
 # List of models with saved pages, extracted rand values and crypted passwords
 FULLY_TESTED_MODELS = [
@@ -157,7 +157,7 @@ def test_parse_login_form_rand(
         )
         == rand
     )
-    assert make_md5(merge(password, rand)) == crypted_password
+    assert merge_hash(password, rand) == crypted_password
 
 
 @pytest.mark.parametrize(
@@ -195,7 +195,7 @@ def test_get_login_password(
         mock_response.status_code = requests.codes.ok
         mock_request.return_value = mock_response
         connector._page_fetcher._login_page_response = mock_response
-        assert make_md5(merge(password, rand)) == crypted_password
+        assert merge_hash(password, rand) == crypted_password
 
 
 @pytest.mark.parametrize(
@@ -213,8 +213,8 @@ def test_get_login_cookie_by_model(
     connector.turn_on_offline_mode(f"pages/{switch_model.MODEL_NAME}/0")
     connector.autodetect_model()
     data = {
-        connector.switch_model.LOGIN_TEMPLATE["key"]: make_md5(
-            merge(connector._password, rand)
+        connector.switch_model.LOGIN_TEMPLATE["key"]: merge_hash(
+            connector._password, rand
         ),
     }
     with (
@@ -267,10 +267,12 @@ def test_get_switch_infos(switch_model: type[AutodetectedSwitchModel]) -> None:
     """Test initialization of NetgearSwitchConnector."""
     with (
         patch("py_netgear_plus.time.perf_counter", return_value=0),
-        patch("py_netgear_plus.NetgearSwitchConnector.fetch_page") as mock_fetch_page,
+        patch(
+            "py_netgear_plus.NetgearSwitchConnector.fetch_page_from_templates"
+        ) as mock_fetch_page_from_templates,
     ):
         page_fetcher = PyTestPageFetcher(switch_model)
-        mock_fetch_page.side_effect = page_fetcher.from_file
+        mock_fetch_page_from_templates.side_effect = page_fetcher.from_file
         connector = NetgearSwitchConnector(host="192.168.0.1", password="password")
         with patch("py_netgear_plus.fetcher.requests.request") as mock_request:
             mock_response = Mock()
