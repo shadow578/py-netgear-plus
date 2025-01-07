@@ -368,7 +368,8 @@ class NetgearSwitchConnector:
             url = template["url"].format(ip=self.host)
             method = template["method"]
             data = {}
-            self._set_data_from_template(template, data)
+            if not self.get_offline_mode():
+                self._set_data_from_template(template, data)
             response = self.fetch_page(method, url, data)
             if self._page_fetcher.has_ok_status(response):
                 return response
