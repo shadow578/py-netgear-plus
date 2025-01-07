@@ -25,7 +25,7 @@ from .models import (
 )
 from .parsers import create_page_parser
 
-__version__ = "0.3.1rc5"
+__version__ = "0.3.1rc6"
 
 DEFAULT_PAGE = "index.htm"
 MAX_AUTHENTICATION_FAILURES = 3
@@ -340,20 +340,23 @@ class NetgearSwitchConnector:
         """Fetch url and retry when first response is a redirect to the login page."""
         response = BaseResponse()
         if not self.get_offline_mode():
-            try:
-                response = self._page_fetcher.request(method, url, data)
-            except NotLoggedInError as error:
-                if self.get_login_cookie():
+            for attempt in range(2):
+                try:
                     response = self._page_fetcher.request(method, url, data)
-                else:
+                    break  # Exit the loop if the request is successful
+                except NotLoggedInError as error:
+                    if attempt == 0 and self.get_login_cookie():
+                        continue  # Retry the request if login cookie is available
                     message = "Not logged in and unable to login."
                     raise LoginFailedError(message) from error
-            except PageFetcherConnectionError:
-                _LOGGER.warning(
-                    "NetgearSwitchConnector.fetch_page: "
-                    "caught PageFetcherConnectionError"
-                )
-                response.status_code = status_code_no_response
+                except PageFetcherConnectionError:
+                    _LOGGER.debug(
+                        "NetgearSwitchConnector.fetch_page: "
+                        "caught PageFetcherConnectionError"
+                    )
+                    response.status_code = status_code_no_response
+                    response.content = b""
+                    break  # Stop retrying after a connection error
         else:
             response = self._page_fetcher.get_page_from_file(url)
         return response
@@ -465,16 +468,28 @@ class NetgearSwitchConnector:
             try:
                 port_number = port_number0 + 1
                 current_data[f"port_{port_number}_traffic_rx"] = (
-                    current_data["traffic_rx"][port_number0]
-                    - self._previous_data["traffic_rx"][port_number0]
+                    0
+                    if (self._previous_data["traffic_rx"][port_number0] == 0)
+                    else (
+                        current_data["traffic_rx"][port_number0]
+                        - self._previous_data["traffic_rx"][port_number0]
+                    )
                 )
                 current_data[f"port_{port_number}_traffic_tx"] = (
-                    current_data["traffic_tx"][port_number0]
-                    - self._previous_data["traffic_tx"][port_number0]
+                    0
+                    if (self._previous_data["traffic_tx"][port_number0] == 0)
+                    else (
+                        current_data["traffic_tx"][port_number0]
+                        - self._previous_data["traffic_tx"][port_number0]
+                    )
                 )
                 current_data[f"port_{port_number}_crc_errors"] = (
-                    current_data["crc_errors"][port_number0]
-                    - self._previous_data["crc_errors"][port_number0]
+                    0
+                    if (self._previous_data["crc_errors"][port_number0] == 0)
+                    else (
+                        current_data["crc_errors"][port_number0]
+                        - self._previous_data["crc_errors"][port_number0]
+                    )
                 )
                 current_data[f"port_{port_number}_sum_rx"] = current_data["sum_rx"][
                     port_number0
