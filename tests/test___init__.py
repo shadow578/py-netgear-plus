@@ -12,13 +12,20 @@ from py_netgear_plus import (
     _from_bytes_to_megabytes,
 )
 from py_netgear_plus.fetcher import URL_REQUEST_TIMEOUT
-from py_netgear_plus.models import GS308EP, GS316EPP, AutodetectedSwitchModel, GS108Ev3
+from py_netgear_plus.models import (
+    GS308EP,
+    GS308EPP,
+    GS316EPP,
+    AutodetectedSwitchModel,
+    GS108Ev3,
+)
 from py_netgear_plus.netgear_crypt import merge_hash
 
 # List of models with saved pages, extracted rand values and crypted passwords
 FULLY_TESTED_MODELS = [
     (GS108Ev3, "1763184457", "c2c905d5d99f592106a378bf709b737a", "<html></html>"),
     (GS308EP, "990464497", "43001294a37a3f2e1f919b64072a1a32", "<html></html>"),
+    (GS308EPP, "1425622205", "e65ad5ee60718843afafeaa03bd1ec49", "<html></html>"),
     (
         GS316EPP,
         "1127757600",
@@ -29,6 +36,7 @@ FULLY_TESTED_MODELS = [
 PARTIALLY_TESTED_MODELS = [
     pytest.param(GS108Ev3, marks=pytest.mark.xfail(reason="no valid data pages")),
     GS308EP,
+    GS308EPP,
     GS316EPP,
 ]
 
@@ -246,6 +254,8 @@ def test_get_login_cookie_by_model(
         ("GS308EP/unauthenticated.html", False),
         ("GS308EP/0/dashboard.cgi", True),
         ("GS308EP/0/portStatistics.cgi", True),
+        ("GS308EPP/0/dashboard.cgi", True),
+        ("GS308EPP/0/portStatistics.cgi", True),
         ("GS316EPP/unauthenticated.html", False),
         ("GS316EPP/0/dashboard.html", True),
     ],

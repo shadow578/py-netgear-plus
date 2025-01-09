@@ -25,7 +25,7 @@ from .models import (
 )
 from .parsers import create_page_parser
 
-__version__ = "0.3.1rc6"
+__version__ = "0.4.0rc0"
 
 DEFAULT_PAGE = "index.htm"
 MAX_AUTHENTICATION_FAILURES = 3
@@ -779,9 +779,12 @@ class NetgearSwitchConnector:
                     response.status_code,
                     url,
                 )
-            time.sleep(self.sleep_time)
-        # The pages should be called unauthenticated, so logout first
+
+    def save_autodetect_templates(self, path_prefix: str = "") -> None:
+        """Save all pages used to detect the switch model to files for debugging."""
+        # These pages should be called unauthenticated, so logout first
         if self.get_cookie() != (None, None):
+            _LOGGER.debug("NetgearSwitchConnector.save_autodetect_templates logout")
             self.delete_login_cookie()
         for template in self.switch_model.AUTODETECT_TEMPLATES:
             url = template["url"].format(ip=self.host)

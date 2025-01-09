@@ -41,6 +41,7 @@ import os
 import time
 from pathlib import Path
 from sys import stderr
+from typing import Any
 
 from py_netgear_plus import (
     LoginFailedError,
@@ -104,11 +105,45 @@ def save_switch_infos(path_prefix: str, switch_infos: dict) -> None:
 
 def main() -> None:
     """Parse arguments and execute the corresponding command."""
+    parser = parse_commandline()
+    args = parser.parse_args()
+
+    if args.command == "version":
+        version_command()
+        return
+
+    if args.debug:
+        logging.basicConfig(level=logging.DEBUG)
+        print("Enabling debug mode.", file=stderr)  # noqa: T201
+
+    command_functions = {
+        "collect": collect_command,
+        "identify": identify_command,
+        "login": login_command,
+        "logout": logout_command,
+        "parse": parse_command,
+        "save": save_command,
+        "status": status_command,
+        "version": version_command,
+    }
+
+    if args.command in command_functions:
+        command_chooser(args, command_functions)
+
+    else:
+        if args.command:
+            print(f"Invalid command: {args.command}\n", file=stderr)  # noqa: T201
+        parser.print_help(stderr)
+
+
+def parse_commandline() -> argparse.ArgumentParser:
+    """Parse command-line arguments."""
     parser = argparse.ArgumentParser(description="Netgear Plus CLI")
     parser.add_argument(
         "--password",
         "-P",
-        help="Password for the switch",
+        help="Password for the switch. "
+        "Defaults to NETGEAR_PLUS_PASSWORD environment variable (if set).",
         default=os.getenv("NETGEAR_PLUS_PASSWORD"),
     )
     parser.add_argument(
@@ -150,56 +185,52 @@ def main() -> None:
     )
     login_parser.add_argument("host", help="Netgear Switch IP address")
 
+    identify_parser = subparsers.add_parser(
+        "identify", help="Identify the switch model"
+    )
+    identify_parser.add_argument(
+        "host", help="Netgear Switch IP address", nargs="?", default=""
+    )
+
     subparsers.add_parser("collect", help="Collect a full set of data for testing")
-    subparsers.add_parser("identify", help="Identify the switch model")
     subparsers.add_parser("logout", help="Logout from the switch and delete the cookie")
     subparsers.add_parser("parse", help="Parse pages and save data to file")
     subparsers.add_parser("save", help="Save pages to file")
     subparsers.add_parser("status", help="Display switch status")
     subparsers.add_parser("version", help="Display CLI version")
 
-    args = parser.parse_args()
+    return parser
 
+
+def command_chooser(
+    args: argparse.Namespace, command_functions: dict[str, Any]
+) -> None:
+    """Choose the appropriate command function based on the command-line arguments."""
     connector = None
-
-    if args.command == "version":
-        version_command()
-        return
-
-    if args.debug:
-        logging.basicConfig(level=logging.DEBUG)
-        print("Enabling debug mode.", file=stderr)  # noqa: T201
-
-    command_functions = {
-        "collect": collect_command,
-        "identify": identify_command,
-        "login": login_command,
-        "logout": logout_command,
-        "parse": parse_command,
-        "save": save_command,
-        "status": status_command,
-        "version": version_command,
-    }
-
-    if args.command in command_functions:
-        if args.command == "login":
-            if not args.password:
-                print("Password is required for login.", file=stderr)  # noqa: T201
-                return
-            connector = NetgearSwitchConnector(args.host, args.password)
-        else:
-            saved_host = get_saved_host()
-            if not saved_host:
-                print("Host not found. Please login first.", file=stderr)  # noqa: T201
-                return
-            connector = NetgearSwitchConnector(saved_host, args.password)
-
-        command_functions[args.command](connector, args)
-
+    if args.command == "login":
+        if not args.password:
+            print("Password is required for login.", file=stderr)  # noqa: T201
+            return
+        connector = NetgearSwitchConnector(args.host, args.password)
+    elif args.command == "identify":
+        host = args.host or get_saved_host()
+        if not host:
+            print("Host is required for identify.", file=stderr)  # noqa: T201
+            return
+        connector = NetgearSwitchConnector(str(host), args.password)
     else:
-        if args.command:
-            print(f"Invalid command: {args.command}\n", file=stderr)  # noqa: T201
-        parser.print_help(stderr)
+        saved_host = get_saved_host()
+        if not saved_host:
+            print("Host not found. Please login first.", file=stderr)  # noqa: T201
+            return
+        connector = NetgearSwitchConnector(saved_host, args.password)
+
+    try:
+        command_functions[args.command](connector, args)
+    except LoginFailedError:
+        print("Invalid credentials. Please login again.", file=stderr)  # noqa: T201
+        if Path.exists(COOKIE_FILE):
+            Path(COOKIE_FILE).unlink()
 
 
 def collect_command(
@@ -230,6 +261,14 @@ def collect_command(
         switch_infos = connector.get_switch_infos()
         switch_infos["switch_ip"] = "192.168.0.1"
         save_switch_infos(path, switch_infos)
+    connector.turn_on_online_mode()
+    path = f"{args.path}/{model_name}/0"
+    if args.verbose:
+        print(  # noqa: T201
+            f"Logging out to collect autodetect pages.\nSaving in {path}.", file=stderr
+        )
+    logout_command(connector, args)
+    connector.save_autodetect_templates(path)
     return True
 
 
@@ -262,13 +301,17 @@ def login_command(connector: NetgearSwitchConnector, args: argparse.Namespace) -
 
 def logout_command(
     connector: NetgearSwitchConnector,
-    args: argparse.Namespace,  # noqa: ARG001
+    args: argparse.Namespace,
 ) -> bool:
     """Logout from the switch and delete the cookie."""
-    if not load_cookie(connector):
+    has_cookie = load_cookie(connector)
+    if Path.exists(COOKIE_FILE):
+        if args.verbose:
+            print("Deleting cookie file...", file=stderr)  # noqa: T201
+        Path(COOKIE_FILE).unlink()
+    if not has_cookie:
         print("Not logged in.", file=stderr)  # noqa: T201
         return False
-    Path(COOKIE_FILE).unlink()
     if connector.delete_login_cookie():
         return True
     print("Logout failed.", file=stderr)  # noqa: T201
