@@ -81,7 +81,12 @@ class PageFetcher:
         """Check and cache login page."""
         url = switch_model.LOGIN_TEMPLATE["url"].format(ip=self.host)
         _LOGGER.debug("[PageFetcher.check_login_url] calling request for GET %s", url)
-        self._login_page_response = self.request("get", url)
+        if self.offline_mode:
+            self._login_page_response = self.get_page_from_file(url)
+        else:
+            self._login_page_response = requests.request(
+                "get", url, allow_redirects=False, timeout=URL_REQUEST_TIMEOUT
+            )
         return self.has_ok_status(self._login_page_response)
 
     def get_login_page_response(self) -> Response | BaseResponse | None:
@@ -175,7 +180,7 @@ class PageFetcher:
             script = html.fromstring(response.content).xpath(
                 '//script[contains(text(),"/wmi/login")]'
             )
-            if len(script) and 'top.location.href = "/wmi/login"' in script[0].text:
+            if len(script) > 0 and 'top.location.href = "/wmi/login"' in script[0].text:
                 _LOGGER.info(
                     "[PageFetcher._is_authenticated] Returning false: script=%s",
                     script[0].text,
