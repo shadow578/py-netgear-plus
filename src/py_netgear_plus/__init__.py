@@ -25,7 +25,7 @@ from .models import (
 )
 from .parsers import create_page_parser
 
-__version__ = "0.4.0rc0"
+__version__ = "0.4.0rc1"
 
 DEFAULT_PAGE = "index.htm"
 MAX_AUTHENTICATION_FAILURES = 3
@@ -80,8 +80,10 @@ class NetgearSwitchConnector:
         # Login related instance variables
         # plain login password
         self._password = password
-        # hash data
+        # Model page template param variables
         self._client_hash = ""
+        self._gambit = ""
+
         self._authentication_failure_count = 0
 
         # previous data calculation
@@ -259,16 +261,16 @@ class NetgearSwitchConnector:
             ", ".join(self.switch_model.ALLOWED_COOKIE_TYPES),
         )
         # GS31xEP(P) series switches return the cookie value in a hidden form element
-        gambit = self._page_parser.parse_gambit_tag(response)
-        if gambit:
+        self._gambit = self._page_parser.parse_gambit_tag(response)
+        if self._gambit:
             self._page_fetcher.set_cookie(
-                self.switch_model.ALLOWED_COOKIE_TYPES[0], gambit
+                self.switch_model.ALLOWED_COOKIE_TYPES[0], self._gambit
             )
             _LOGGER.debug("[NetgearSwitchConnector.get_login_cookie] Found Gambit tag:")
             _LOGGER.debug(
                 "[NetgearSwitchConnector.get_login_cookie] Setting cookie %s=%s",
                 self.switch_model.ALLOWED_COOKIE_TYPES[0],
-                gambit,
+                str(self._gambit),
             )
             self._authentication_failure_count = 0
             return True

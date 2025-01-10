@@ -280,7 +280,7 @@ class GS316EP(GS30xSeries):
         {
             "method": "get",
             "url": "http://{ip}/iss/specific/dashboard.html",
-            "params": {"Gambit": "cookie_content"},
+            "params": {"Gambit": "_gambit"},
         }
     ]
     PORT_STATUS_TEMPLATES: ClassVar = SWITCH_INFO_TEMPLATES
@@ -288,42 +288,42 @@ class GS316EP(GS30xSeries):
         {
             "method": "get",
             "url": "http://{ip}/iss/specific/interface_stats.html",
-            "params": {"Gambit": "cookie_content"},
+            "params": {"Gambit": "_gambit"},
         }
     ]
     POE_PORT_CONFIG_TEMPLATES: ClassVar = [
         {
             "method": "get",
             "url": "http://{ip}/iss/specific/poePortConf.html",
-            "params": {"Gambit": "cookie_content"},
+            "params": {"Gambit": "_gambit"},
         }
     ]
     SWITCH_POE_PORT_TEMPLATES: ClassVar = [
         {
             "method": "post",
             "url": "http://{ip}/iss/specific/poePortConf.html",
-            "params": {"Gambit": "cookie_content"},
+            "params": {"Gambit": "_gambit"},
         }
     ]
     CYCLE_POE_PORT_TEMPLATES: ClassVar = [
         {
             "method": "post",
             "url": "http://{ip}/iss/specific/poePortConf.html",
-            "params": {"Gambit": "cookie_content"},
+            "params": {"Gambit": "_gambit"},
         }
     ]
     POE_PORT_STATUS_TEMPLATES: ClassVar = [
         {
             "method": "get",
             "url": "http://{ip}/iss/specific/poePortStatus.html",
-            "params": {"Gambit": "cookie_content", "GetData": "TRUE"},
+            "params": {"Gambit": "_gambit", "GetData": "TRUE"},
         }
     ]
     LOGOUT_TEMPLATES: ClassVar = [
         {
             "method": "post",
             "url": "http://{ip}/logout.html",
-            "params": {"Gambit": "cookie_content"},
+            "params": {"Gambit": "_gambit"},
         }
     ]
 

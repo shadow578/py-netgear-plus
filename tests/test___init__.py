@@ -6,12 +6,13 @@ from unittest.mock import Mock, patch
 
 import pytest
 import requests
+import requests.cookies
 from py_netgear_plus import (
     DEFAULT_PAGE,
     NetgearSwitchConnector,
     _from_bytes_to_megabytes,
 )
-from py_netgear_plus.fetcher import URL_REQUEST_TIMEOUT
+from py_netgear_plus.fetcher import URL_REQUEST_TIMEOUT, BaseResponse
 from py_netgear_plus.models import (
     GS308EP,
     GS308EPP,
@@ -210,7 +211,7 @@ def test_get_login_password(
     ("switch_model", "rand", "crypted_password", "content"),
     FULLY_TESTED_MODELS,
 )
-def test_get_login_cookie_by_model(
+def test_get_login_cookie(
     switch_model: AutodetectedSwitchModel,
     rand: str,
     crypted_password: str,  # noqa: ARG001
@@ -306,6 +307,77 @@ def test_get_switch_infos(switch_model: type[AutodetectedSwitchModel]) -> None:
                 validation_data = json.loads(file.read())
                 assert switch_data == validation_data
             page_fetcher.next_sequence()
+
+
+@pytest.mark.parametrize(
+    "switch_model",
+    TEST_MODELS,
+)
+def test_turn_on_and_off_poe_port(switch_model: type[AutodetectedSwitchModel]) -> None:
+    """Test turning on/off power on a PoE port."""
+    with (
+        patch(
+            "py_netgear_plus.NetgearSwitchConnector.fetch_page_from_templates"
+        ) as mock_fetch_page_from_templates,
+    ):
+        page_fetcher = PyTestPageFetcher(switch_model)
+        mock_fetch_page_from_templates.side_effect = page_fetcher.from_file
+
+        connector = NetgearSwitchConnector(host="192.168.0.1", password="password")
+
+        with patch("py_netgear_plus.fetcher.requests.request") as mock_request:
+            mock_response = Mock()
+            with page_fetcher.get_path(
+                switch_model.AUTODETECT_TEMPLATES
+            ).open() as file:
+                mock_response.content = file.read()
+            mock_response.status_code = requests.codes.ok
+            mock_request.return_value = mock_response
+            connector.autodetect_model()
+        assert isinstance(connector.switch_model, switch_model)
+        assert isinstance(connector.switch_model.POE_PORTS, list)
+        if len(connector.switch_model.POE_PORTS) == 0:
+            pytest.skip(f"Model {switch_model.MODEL_NAME} has no PoE ports.")
+
+        connector._client_hash = "client_hash"
+        connector._gambit = "gambit"
+        connector.set_cookie("cookie_name", "cookie_value")
+
+        response = BaseResponse()
+        response.status_code = requests.codes.ok
+        response.content = b"SUCCESS"
+        with patch(
+            "py_netgear_plus.fetcher.requests.request",
+            return_value=response,
+        ) as mock_request:
+            cookies = requests.cookies.RequestsCookieJar()
+            cookies.set(
+                str(connector.get_cookie()[0]),
+                str(connector.get_cookie()[1]),
+                domain=connector.host,
+                path="/",
+            )
+
+            mock_request.return_value = response
+
+            for state in ["on", "off"]:
+                poe_port = connector.switch_model.POE_PORTS[0]
+                data = connector.switch_model.get_switch_poe_port_data(poe_port, state)
+                connector._set_data_from_template(
+                    connector.switch_model.SWITCH_POE_PORT_TEMPLATES[0], data
+                )
+                connector.switch_poe_port(poe_port, state)
+                mock_request.assert_called()
+                mock_request.assert_called_with(
+                    connector.switch_model.SWITCH_POE_PORT_TEMPLATES[0]["method"],
+                    connector.switch_model.SWITCH_POE_PORT_TEMPLATES[0]["url"].format(
+                        ip=connector.host
+                    ),
+                    data=data,
+                    cookies=cookies,
+                    timeout=URL_REQUEST_TIMEOUT,
+                    allow_redirects=False,
+                )
 
 
 if __name__ == "__main__":
