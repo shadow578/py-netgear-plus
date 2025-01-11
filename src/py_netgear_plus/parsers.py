@@ -112,12 +112,14 @@ class PageParser:
 
     def parse_login_form_rand(self, page: Response | BaseResponse | None) -> str | None:
         """Return rand value from login page if present."""
-        if page is None or not page.content:
-            return None
-        tree = html.fromstring(page.content)
-        input_rand_elems = tree.xpath('//input[@id="rand"]')
-        if input_rand_elems:
-            return input_rand_elems[0].value
+        if page is not None and page.content:
+            tree = html.fromstring(page.content)
+            input_rand_elems = tree.xpath('//input[@id="rand"]')
+            if input_rand_elems and input_rand_elems[0].value:
+                return input_rand_elems[0].value
+        _LOGGER.debug(
+            "[PageParser.parse_login_form_rand] rand INPUT element not found."
+        )
         return None
 
     def check_login_form_rand(self, page: Response | BaseResponse) -> bool:
@@ -127,12 +129,12 @@ class PageParser:
     def parse_login_title_tag(self, page: Response | BaseResponse) -> str | None:
         """Return the title tag from the login page."""
         """For new firmwares V2.06.10, V2.06.17, V2.06.24."""
-        if page is None or not page.content:
-            return None
-        tree = html.fromstring(page.content)
-        title_elems = tree.xpath("//title")
-        if title_elems:
-            return title_elems[0].text.replace("NETGEAR", "").strip()
+        if page is not None and page.content:
+            tree = html.fromstring(page.content)
+            title_elems = tree.xpath("//title")
+            if title_elems and title_elems[0].text:
+                return title_elems[0].text.replace("NETGEAR", "").strip()
+        _LOGGER.debug("[PageParser.parse_login_title_tag] TITLE element not found.")
         return None
 
     def parse_login_switchinfo_tag(self, page: Response | BaseResponse) -> str | None:
@@ -140,23 +142,26 @@ class PageParser:
         """For old firmware V2.00.05, return """ ""
         """or something like: "GS108Ev3 - 8-Port Gigabit ProSAFE Plus Switch"."""
         """Newer firmwares contains that too."""
-        if page is None or not page.content:
-            return None
-        tree = html.fromstring(page.content)
-        switchinfo_elems = tree.xpath('//div[@class="switchInfo"]')
-        if switchinfo_elems:
-            return switchinfo_elems[0].text
+        if page is not None and page.content:
+            tree = html.fromstring(page.content)
+            switchinfo_elems = tree.xpath('//div[@class="switchInfo"]')
+            if switchinfo_elems:
+                return switchinfo_elems[0].text
+        _LOGGER.debug(
+            "[PageParser.parse_login_switchinfo_tag] "
+            "DIV with class 'switchInfo' not found."
+        )
         return None
 
     def parse_gambit_tag(self, page: Response | BaseResponse) -> str | None:
         """Parse Gambit form element."""
         # GS31xEP(P) series switches return the cookie value in a hidden form element
-        if page is None or not page.content:
-            return None
-        tree = html.fromstring(page.content)
-        gambit_elems = tree.xpath('//input[@name="Gambit"]')
-        if gambit_elems:
-            return gambit_elems[0].text
+        if page is not None and page.content:
+            tree = html.fromstring(page.content)
+            gambit_elems = tree.xpath('//input[@name="Gambit"]')
+            if gambit_elems and gambit_elems[0].value:
+                return gambit_elems[0].value
+        _LOGGER.debug("[PageParser.parse_gambit_tag] Gambit INPUT element not found.")
         return None
 
     def has_api_v2(self) -> bool:
