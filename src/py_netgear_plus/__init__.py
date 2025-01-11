@@ -25,7 +25,7 @@ from .models import (
 )
 from .parsers import create_page_parser
 
-__version__ = "0.4.0rc2"
+__version__ = "0.4.0rc3"
 
 DEFAULT_PAGE = "index.htm"
 MAX_AUTHENTICATION_FAILURES = 3
@@ -97,6 +97,11 @@ class NetgearSwitchConnector:
             "[NetgearSwitchConnector] instance (v%s) created for IP=%s",
             __version__,
             self.host,
+        )
+        _LOGGER.debug(
+            "[NetgearSwitchConnector] DEBUG logging enabled. "
+            "Your logs may contain sensitve information like "
+            "passwords or session cookies. Do not use in production."
         )
 
     def turn_on_offline_mode(self, path_prefix: str) -> None:
@@ -284,6 +289,10 @@ class NetgearSwitchConnector:
                 self._page_fetcher.set_cookie(ct, cookie)
                 self._authentication_failure_count = 0
                 return True
+        _LOGGER.debug(
+            "[NetgearSwitchConnector.get_login_cookie] "
+            "No Gambit tag or valid cookie found."
+        )
         self._handle_soft_authentication_failure(response)
         return False
 

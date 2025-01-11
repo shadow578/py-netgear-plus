@@ -79,15 +79,31 @@ class PageFetcher:
 
     def check_login_url(self, switch_model: type[AutodetectedSwitchModel]) -> bool:
         """Check and cache login page."""
-        url = switch_model.LOGIN_TEMPLATE["url"].format(ip=self.host)
-        _LOGGER.debug("[PageFetcher.check_login_url] calling request for GET %s", url)
-        if self.offline_mode:
-            self._login_page_response = self.get_page_from_file(url)
-        else:
-            self._login_page_response = requests.request(
-                "get", url, allow_redirects=False, timeout=URL_REQUEST_TIMEOUT
-            )
-        return self.has_ok_status(self._login_page_response)
+        templates = switch_model.AUTODETECT_TEMPLATES
+        for template in templates:
+            url = template["url"].format(ip=self.host)
+            if self.offline_mode:
+                _LOGGER.debug(
+                    "[PageFetcher.check_login_url] reading %s from file.", url
+                )
+                self._login_page_response = self.get_page_from_file(url)
+            else:
+                allow_redirects = False
+                timeout = URL_REQUEST_TIMEOUT
+                _LOGGER.debug(
+                    "[PageFetcher.check_login_url] calling request for GET %s"
+                    " with allow_directs=%s, timeout=%d",
+                    url,
+                    allow_redirects,
+                    timeout,
+                )
+                self._login_page_response = requests.request(
+                    "get", url, allow_redirects=allow_redirects, timeout=timeout
+                )
+            if self.has_ok_status(self._login_page_response):
+                return True
+        message = f"Failed to load any page of templates: {templates}"
+        raise PageNotLoadedError(message)
 
     def get_login_page_response(self) -> Response | BaseResponse | None:
         """Return cached login page."""
@@ -149,18 +165,29 @@ class PageFetcher:
         template = switch_model.LOGIN_TEMPLATE
         url = template["url"].format(ip=self.host)
         method = template["method"]
+        data_key = "data" if method.lower() == "post" else "params"
         key = template["key"]
+        allow_redirects = True
+        timeout = URL_REQUEST_TIMEOUT
         _LOGGER.debug(
-            "[PageFetcher.get_login_page] calling request for %s %s",
+            "[PageFetcher.get_login_page] calling request for %s %s"
+            " with %s=%s, allow_redirects=%s, timeout=%d",
             method.upper(),
             url,
+            data_key,
+            {key: password if rand else "<clear text password>"},
+            allow_redirects,
+            timeout,
         )
-        response = requests.request(
+        kw_args = {
+            data_key: {key: password},
+            "allow_redirects": allow_redirects,
+            "timeout": timeout,
+        }
+        response = requests.request(  # noqa: S113
             method,
             url,
-            data={key: password},
-            allow_redirects=True,
-            timeout=URL_REQUEST_TIMEOUT,
+            **kw_args,
         )
         if not response or response.status_code != status_code_ok:
             raise LoginFailedError
@@ -202,22 +229,32 @@ class PageFetcher:
         if timeout == 0:
             timeout = URL_REQUEST_TIMEOUT
         jar = requests.cookies.RequestsCookieJar()
+        response = Response()
+        data_key = "data" if method == "post" else "params"
         if self._cookie_name and self._cookie_content:
             jar.set(self._cookie_name, self._cookie_content, domain=self.host, path="/")
             _LOGGER.debug(
-                "[PageFetcher.request] calling %s %s with %s cookie",
+                "[PageFetcher.request] calling %s %s with %s cookie"
+                " with %s=%s, allow_redirects=%s, timeout=%d",
                 method.upper(),
                 url,
                 self._cookie_name,
+                data_key,
+                data,
+                allow_redirects,
+                timeout,
             )
         else:
             _LOGGER.debug(
-                "[PageFetcher.request] calling %s %s without cookie",
+                "[PageFetcher.request] calling %s %s without cookie"
+                " with %s=%s, allow_redirects=%s, timeout=%d",
                 method.upper(),
                 url,
+                data_key,
+                data,
+                allow_redirects,
+                timeout,
             )
-        response = Response()
-        data_key = "data" if method == "post" else "params"
         kwargs = {
             data_key: data,
             "cookies": jar,
