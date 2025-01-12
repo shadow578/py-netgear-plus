@@ -130,16 +130,27 @@ def test_autodetect_model(switch_model: type[AutodetectedSwitchModel]) -> None:
 )
 def test_check_login_url(switch_model: type[AutodetectedSwitchModel]) -> None:
     """Test check_login_url method."""
+    page_fetcher = PyTestPageFetcher(switch_model)
     connector = NetgearSwitchConnector(host="192.168.0.1", password="password")
     with patch("py_netgear_plus.fetcher.requests.request") as mock_request:
         mock_response = Mock()
-        page_name = switch_model.LOGIN_TEMPLATE["url"].split("/")[-1] or DEFAULT_PAGE
-        with Path(f"pages/{switch_model.MODEL_NAME}/0/{page_name}").open() as file:
+        with page_fetcher.get_path(switch_model.AUTODETECT_TEMPLATES).open() as file:
             mock_response.content = file.read()
+        mock_response.status_code = requests.codes.ok
+        mock_request.return_value = mock_response
         mock_response.status_code = requests.codes.ok
         mock_request.return_value = mock_response
         assert connector._page_fetcher.check_login_url(switch_model) is True
         assert connector._page_fetcher._login_page_response == mock_response
+        checks = switch_model.CHECKS_AND_RESULTS
+        if True in next(
+            (check[1] for check in checks if check[0] == "check_login_form_rand"),
+            [False],
+        ):
+            rand = connector._page_parser.parse_login_form_rand(
+                connector._page_fetcher._login_page_response
+            )
+            assert rand is not None
 
 
 @pytest.mark.parametrize(

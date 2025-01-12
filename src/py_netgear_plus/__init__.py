@@ -25,7 +25,7 @@ from .models import (
 )
 from .parsers import create_page_parser
 
-__version__ = "0.4.0rc4"
+__version__ = "0.4.0rc5"
 
 DEFAULT_PAGE = "index.htm"
 MAX_AUTHENTICATION_FAILURES = 3
@@ -302,6 +302,8 @@ class NetgearSwitchConnector:
 
     def set_cookie(self, name: str, content: str) -> None:
         """Return cookie."""
+        if name == "gambitCookie":
+            self._gambit = content
         return self._page_fetcher.set_cookie(name, content)
 
     def delete_login_cookie(self) -> bool:
