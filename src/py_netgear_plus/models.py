@@ -321,8 +321,8 @@ class GS316EP(GS30xSeries):
     ]
     LOGOUT_TEMPLATES: ClassVar = [
         {
-            "method": "post",
-            "url": "http://{ip}/logout.html",
+            "method": "get",
+            "url": "http://{ip}/iss/specific/logout.html",
             "params": {"Gambit": "_gambit"},
         }
     ]
