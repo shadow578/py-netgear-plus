@@ -25,7 +25,7 @@ from .models import (
 )
 from .parsers import create_page_parser
 
-__version__ = "0.4.0rc6"
+__version__ = "0.4.0rc7"
 
 DEFAULT_PAGE = "index.htm"
 MAX_AUTHENTICATION_FAILURES = 3
@@ -309,6 +309,8 @@ class NetgearSwitchConnector:
     def delete_login_cookie(self) -> bool:
         """Logout and delete cookie."""
         """Only used while testing. Prevents "Maximum number of sessions" error."""
+        if not self.switch_model or self.switch_model.MODEL_NAME == "":
+            self.autodetect_model()
         response = BaseResponse()
         for template in self.switch_model.LOGOUT_TEMPLATES:
             url = template["url"].format(ip=self.host)
