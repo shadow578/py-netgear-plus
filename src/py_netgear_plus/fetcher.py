@@ -17,6 +17,7 @@ URL_REQUEST_TIMEOUT = 15
 status_code_ok = requests.codes.ok
 status_code_not_found = requests.codes.not_found
 status_code_no_response = requests.codes.no_response
+status_code_unauthorized = requests.codes.unauthorized
 
 _LOGGER = logging.getLogger(__name__)
 

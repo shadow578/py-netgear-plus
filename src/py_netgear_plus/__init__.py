@@ -16,6 +16,7 @@ from .fetcher import (
     Response,
     status_code_no_response,
     status_code_not_found,
+    status_code_unauthorized,
 )
 from .models import (
     MODELS,
@@ -317,7 +318,26 @@ class NetgearSwitchConnector:
             method = template["method"]
             data = {}
             self._set_data_from_template(template, data)
-            response = self.fetch_page(method, url, data)
+
+            if not self.get_offline_mode():
+                try:
+                    response = self._page_fetcher.request(method, url, data)
+                    break  # Exit the loop if the request is successful
+                except NotLoggedInError:
+                    response.status_code = status_code_unauthorized
+                    response.content = b""
+                    break
+                except PageFetcherConnectionError:
+                    _LOGGER.debug(
+                        "NetgearSwitchConnector.fetch_page: "
+                        "caught PageFetcherConnectionError"
+                    )
+                    response.status_code = status_code_no_response
+                    response.content = b""
+                    break  # Stop retrying after a connection error
+            else:
+                response = self._page_fetcher.get_page_from_file(url)
+
             if response.status_code != status_code_not_found:
                 break
 
