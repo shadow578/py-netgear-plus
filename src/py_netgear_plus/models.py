@@ -240,6 +240,14 @@ class GS308EPP(GS30xSeries):
         ("parse_login_title_tag", ["GS308EPP"]),
     ]
 
+    def get_switch_poe_port_data(self, poe_port: int, state: str) -> dict:
+        """Fill dict with form fields for switching a PoE port."""
+        return {
+            "ACTION": "Apply",
+            "portID": poe_port - 1,
+            "ADMIN_MODE": 1 if state == "on" else 0,
+        }
+
 
 class GS316EP(GS30xSeries):
     """Definition for Netgear GS316EP model."""
