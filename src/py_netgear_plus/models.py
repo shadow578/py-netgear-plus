@@ -246,7 +246,12 @@ class GS308EPP(GS30xSeries):
             "ACTION": "Apply",
             "portID": poe_port - 1,
             "ADMIN_MODE": 1 if state == "on" else 0,
-        }
+            "PORT_PRIO": 0,
+            "POW_MOD": 3,
+            "POW_LIMT_TYP": 2,
+            "POW_LIMIT": 30.0,
+            "DETEC_TYP": 2,
+            "DISCONNECT_TYP": 2,        }
 
 
 class GS316EP(GS30xSeries):
