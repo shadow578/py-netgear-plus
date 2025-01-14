@@ -251,7 +251,8 @@ class GS308EPP(GS30xSeries):
             "POW_LIMT_TYP": 2,
             "POW_LIMIT": 30.0,
             "DETEC_TYP": 2,
-            "DISCONNECT_TYP": 2,        }
+            "DISCONNECT_TYP": 2,
+        }
 
 
 class GS316EP(GS30xSeries):
