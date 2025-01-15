@@ -26,7 +26,7 @@ from .models import (
 )
 from .parsers import create_page_parser
 
-__version__ = "0.4.0rc10"
+__version__ = "0.4.0rc11"
 
 DEFAULT_PAGE = "index.htm"
 MAX_AUTHENTICATION_FAILURES = 3
@@ -569,7 +569,7 @@ class NetgearSwitchConnector:
             if port_status_is_connected:
                 keys = ["sum_rx", "sum_tx", "speed_io"]
                 for key in keys:
-                    if current_data[f"port_{port_number}_{key}"] <= 0:
+                    if current_data[f"port_{port_number}_{key}"] < 0:
                         current_data[f"port_{port_number}_{key}"] = self._previous_data[
                             key
                         ][port_number0]

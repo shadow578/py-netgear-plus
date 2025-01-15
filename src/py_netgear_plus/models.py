@@ -189,6 +189,23 @@ class GS30xSeries(AutodetectedSwitchModel):
         }
 
 
+class GS30xEPPSeries(GS30xSeries):
+    """Parent class definition for Netgear GS3xxEPP series."""
+
+    def get_switch_poe_port_data(self, poe_port: int, state: str) -> dict:
+        """Fill dict with form fields for switching a PoE port."""
+        return {
+            "ACTION": "Apply",
+            "portID": poe_port - 1,
+            "ADMIN_MODE": 1 if state == "on" else 0,
+            "PORT_PRIO": 0,
+            "POW_MOD": 3,
+            "POW_LIMT_TYP": 2,
+            "DETEC_TYP": 2,
+            "DISCONNECT_TYP": 2,
+        }
+
+
 class GS305EP(GS30xSeries):
     """Definition for Netgear GS305EP model."""
 
@@ -202,7 +219,7 @@ class GS305EP(GS30xSeries):
     ]
 
 
-class GS305EPP(GS30xSeries):
+class GS305EPP(GS30xEPPSeries):
     """Definition for Netgear GS305EP model."""
 
     MODEL_NAME = "GS305EPP"
@@ -228,7 +245,7 @@ class GS308EP(GS30xSeries):
     ]
 
 
-class GS308EPP(GS30xSeries):
+class GS308EPP(GS30xEPPSeries):
     """Definition for Netgear GS308EP model."""
 
     MODEL_NAME = "GS308EPP"
@@ -239,20 +256,6 @@ class GS308EPP(GS30xSeries):
         ("check_login_form_rand", [True]),
         ("parse_login_title_tag", ["GS308EPP"]),
     ]
-
-    def get_switch_poe_port_data(self, poe_port: int, state: str) -> dict:
-        """Fill dict with form fields for switching a PoE port."""
-        return {
-            "ACTION": "Apply",
-            "portID": poe_port - 1,
-            "ADMIN_MODE": 1 if state == "on" else 0,
-            "PORT_PRIO": 0,
-            "POW_MOD": 3,
-            "POW_LIMT_TYP": 2,
-            "POW_LIMIT": 30.0,
-            "DETEC_TYP": 2,
-            "DISCONNECT_TYP": 2,
-        }
 
 
 class GS316EP(GS30xSeries):
