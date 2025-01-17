@@ -146,8 +146,7 @@ class PageFetcher:
                 )
         else:
             _LOGGER.debug(
-                "[NetgearSwitchConnector.get_page_from_file] "
-                "offline page=%s not found",
+                "[NetgearSwitchConnector.get_page_from_file] offline page=%s not found",
                 page_name,
             )
         return response

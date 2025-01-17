@@ -255,8 +255,7 @@ class NetgearSwitchConnector:
             )
         else:
             _LOGGER.debug(
-                "[NetgearSwitchConnector.get_login_cookie]"
-                " using password in plain text"
+                "[NetgearSwitchConnector.get_login_cookie] using password in plain text"
             )
         response = self._page_fetcher.get_login_response(
             self.switch_model, self._password, rand
