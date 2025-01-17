@@ -45,18 +45,22 @@ some basic configuration updates.
 | GS105Ev3 | 5     | ?                                      |                     |
 | GS108Ev3 | 8     | V2.00.05, V2.06.10, V2.06.17, V2.06.24 | V2.06.01 - V2.06.03 |
 | GS305EP  | 5     | V1.0.1.1                               |                     |
+| GS305EPP | 5     | V1.0.1.4                               |                     |
 | GS308EP  | 8     | V1.0.0.10, V1.0.1.4                    |                     |
-| GS308EPP | 8     | ?                                      |                     |
+| GS308EPP | 8     | V1.0.1.4                               |                     |
 | GS316EP  | 16    | V1.0.4.4                               |                     |
 | GS316EPP | 16    | V1.0.4.4                               |                     |
 
 Supported firmware languages: GR (German), EN (English)
 
-# Unsupported models
+## Unsupported models
 
 | Model     | Support status  |
 | --------- | --------------- |
 | GS108PEv3 | Not yet started |
+| GS105Ev2  | Not yet started |
+| GS110EMX  | Not yet started |
+| XS512EM   | Not yet started |
 
 ## CLI usage
 
@@ -64,17 +68,18 @@ Supported firmware languages: GR (German), EN (English)
 export NETGEAR_PLUS_PASSWORD=s3cr3t # replace with your password
 ngp-cli login 192.168.178.68 # replace with IP address of your switch
 ngp-cli status
+ngp-cli logout
 ngp-cli -h
 ```
 
 ## Library Usage
 
-### create a python venv with `requests` and `lxml`
+### Create a python virtual environment
 
 ```shell
 python3 -m venv .venv
 source .venv/bin/activate
-pip install lxml requests
+pip install py-netgear-plus
 ```
 
 Using this VENV go to your local source folder
@@ -98,4 +103,6 @@ data = sw.get_switch_infos()
 print(sw.switch_model.MODEL_NAME)
 print(data["port_1_sum_rx_mbytes"])
 print(data)
+sw.turn_off_poe_port(1) # Supported only on PoE capable models
+sw.turn_on_poe_port(1)
 ```
