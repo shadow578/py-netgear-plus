@@ -6,7 +6,6 @@ body:
   - type: markdown
     attributes:
       value: This issue type is only to be used as a developer to create sub-issues. Newly reported issues of this type will be closed.
-  - type: input
   - type: textarea
     attributes:
       label: "Task subject"
