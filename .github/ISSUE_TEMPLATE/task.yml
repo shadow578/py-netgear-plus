@@ -1,0 +1,27 @@
+---
+name: "Task"
+description: "Define a (sub)task to solve an issue (internal only)"
+labels: "Task+Internal"
+body:
+  - type: markdown
+    attributes:
+      value: This issue type is only to be used as a developer to create sub-issues. Newly reported issues of this type will be closed.
+  - type: input
+  - type: textarea
+    attributes:
+      label: "Task subject"
+      description: "A clear and concise description of what the task."
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: "Outcome"
+      description: "A detailed description of the desired outcome."
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: "Solution description"
+      description: "Description of the planned solution implementation."
+    validations:
+      required: false
