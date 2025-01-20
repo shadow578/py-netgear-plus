@@ -60,9 +60,10 @@ class PyTestPageFetcher:
     def from_file(
         self,
         templates: list[dict[str, str]],
-        client_hash: str = "",  # noqa: ARG002
+        client_hash: str = "",
     ) -> requests.Response:
         """Fetch a page from a file."""
+        del client_hash
         response = Mock()
         response.status_code = requests.codes.ok
         response.content = self.get_path(templates).read_bytes()
@@ -101,7 +102,8 @@ def test_0_netgear_switch_connector_initialization() -> None:
     assert connector._switch_bootloader == "unknown"
     assert connector.sleep_time == 0.25
     assert connector._page_fetcher is not None
-    assert connector._client_hash == ""
+    assert connector._client_hash is None
+    assert connector._gambit is None
     assert connector._previous_data == {}
     assert connector._loaded_switch_metadata == {}
 
@@ -374,8 +376,8 @@ def test_turn_on_and_off_poe_port(switch_model: type[AutodetectedSwitchModel]) -
             for state in ["on", "off"]:
                 poe_port = connector.switch_model.POE_PORTS[0]
                 data = connector.switch_model.get_switch_poe_port_data(poe_port, state)
-                connector._set_data_from_template(
-                    connector.switch_model.SWITCH_POE_PORT_TEMPLATES[0], data
+                connector._page_fetcher.set_data_from_template(
+                    connector.switch_model.SWITCH_POE_PORT_TEMPLATES[0], connector, data
                 )
                 connector.switch_poe_port(poe_port, state)
                 mock_request.assert_called()

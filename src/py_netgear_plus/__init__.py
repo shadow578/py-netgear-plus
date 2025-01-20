@@ -24,9 +24,9 @@ from .models import (
     MultipleModelsDetectedError,
     SwitchModelNotDetectedError,
 )
-from .parsers import create_page_parser
+from .parsers import NetgearPlusPageParserError, create_page_parser
 
-__version__ = "0.4.0"
+__version__ = "0.4.1rc0"
 
 DEFAULT_PAGE = "index.htm"
 MAX_AUTHENTICATION_FAILURES = 3
@@ -40,10 +40,6 @@ _LOGGER = logging.getLogger(__name__)
 def _from_bytes_to_megabytes(v: float) -> float:
     bytes_to_mbytes = 1e-6
     return float(f"{round(v * bytes_to_mbytes, 2):.2f}")
-
-
-class EmptyTemplateParameterError(Exception):
-    """None of the models passed the tests."""
 
 
 class InvalidPortStatusError(Exception):
@@ -82,8 +78,8 @@ class NetgearSwitchConnector:
         # plain login password
         self._password = password
         # Model page template param variables
-        self._client_hash = ""
-        self._gambit = ""
+        self._client_hash = None
+        self._gambit = None
 
         self._authentication_failure_count = 0
 
@@ -316,7 +312,7 @@ class NetgearSwitchConnector:
             url = template["url"].format(ip=self.host)
             method = template["method"]
             data = {}
-            self._set_data_from_template(template, data)
+            self._page_fetcher.set_data_from_template(template, self, data)
 
             if not self.get_offline_mode():
                 try:
@@ -347,28 +343,6 @@ class NetgearSwitchConnector:
         )
         self._page_fetcher.clear_cookie()
         return response.status_code != status_code_not_found
-
-    def _set_data_from_template(
-        self, template: dict[str, Any], data: dict[str, Any]
-    ) -> None:
-        """Populate data from template using class variables."""
-        if "params" not in template:
-            return
-        for key, value in template["params"].items():
-            try:
-                data[key] = getattr(self, value)
-            except AttributeError as error:
-                message = (
-                    "NetgearSwitchConnector._set_data_from_template: "
-                    f"missing attribute {key} (class variable {value})"
-                )
-                raise EmptyTemplateParameterError(message) from error
-            if not data[key]:
-                message = (
-                    "NetgearSwitchConnector._set_data_from_template: "
-                    f"empty attribute {key} (class variable {value})"
-                )
-                raise EmptyTemplateParameterError(message)
 
     def fetch_page(self, method: str, url: str, data: dict) -> Response | BaseResponse:
         """Fetch url and retry when first response is a redirect to the login page."""
@@ -403,7 +377,7 @@ class NetgearSwitchConnector:
             method = template["method"]
             data = {}
             if not self.get_offline_mode():
-                self._set_data_from_template(template, data)
+                self._page_fetcher.set_data_from_template(template, self, data)
             response = self.fetch_page(method, url, data)
             if self._page_fetcher.has_ok_status(response):
                 return response
@@ -720,7 +694,7 @@ class NetgearSwitchConnector:
             for template in self.switch_model.SWITCH_POE_PORT_TEMPLATES:
                 url = template["url"].format(ip=self.host)
                 data = self.switch_model.get_switch_poe_port_data(poe_port, state)  # type: ignore[report-call-issue]
-                self._set_data_from_template(template, data)
+                self._page_fetcher.set_data_from_template(template, self, data)
                 _LOGGER.debug("switch_poe_port data=%s", data)
                 response = BaseResponse
                 try:
@@ -759,7 +733,7 @@ class NetgearSwitchConnector:
             for template in self.switch_model.CYCLE_POE_PORT_TEMPLATES:
                 url = template["url"].format(ip=self.host)
                 data = self.switch_model.get_power_cycle_poe_port_data(poe_port)  # type: ignore[report-call-issue]
-                self._set_data_from_template(template, data)
+                self._page_fetcher.set_data_from_template(template, self, data)
                 response = Response
                 method = template["method"]
                 try:
@@ -807,6 +781,16 @@ class NetgearSwitchConnector:
                 page_name = url.split("/")[-1] or DEFAULT_PAGE
                 with Path(f"{path_prefix}/{page_name}").open("wb") as file:
                     file.write(response.content)
+
+                if (
+                    template in self.switch_model.SWITCH_INFO_TEMPLATES
+                    and not self._client_hash
+                ):
+                    with contextlib.suppress(NetgearPlusPageParserError):
+                        self._client_hash = self._page_parser.parse_client_hash(
+                            response
+                        )
+
             else:
                 _LOGGER.warning(
                     "NetgearSwitchConnector.save_pages failed with status %s for %s",

@@ -1,6 +1,7 @@
 """Definitions of html parsers for Netgear Plus switches."""
 
 import logging
+import re
 from typing import Any
 
 from lxml import html
@@ -150,6 +151,23 @@ class PageParser:
         _LOGGER.debug(
             "[PageParser.parse_login_switchinfo_tag] "
             "DIV with class 'switchInfo' not found."
+        )
+        return None
+
+    def parse_first_script_tag(self, page: Response | BaseResponse) -> str | None:
+        """Parse script tag."""
+        if page is not None and page.content:
+            tree = html.fromstring(page.content)
+            script_elems = tree.xpath("//script")
+            if script_elems and script_elems[0].text:
+                model_name = re.search("sysGeneInfor = '([^?]+)?", script_elems[0].text)
+                if model_name:
+                    try:
+                        return model_name.group(1)
+                    except IndexError:
+                        pass
+        _LOGGER.debug(
+            "[PageParser.parse_script_tag] no sysGeneInfor in SCRIPT element found."
         )
         return None
 
@@ -351,6 +369,28 @@ class GS108Ev3(PageParser):
     def __init__(self) -> None:
         """Initialize the GS108E parser."""
         super().__init__()
+
+
+class JGS524Ev2(PageParser):
+    """Parser for the GS108E v3switch."""
+
+    def __init__(self) -> None:
+        """Initialize the GS108E parser."""
+        super().__init__()
+
+    def parse_switch_metadata(self, page: Response | BaseResponse) -> dict[str, Any]:
+        """Parse switch info from the html page."""
+        del page
+        message = "Switch metadata is not supported for JGS524Ev2 switch."
+        raise NotImplementedError(message)
+
+    def parse_error(self, page: Response | BaseResponse) -> str | None:
+        """Parse error from the html page."""
+        tree = html.fromstring(page.content)
+        error_msg = tree.xpath('//div[@class="pwdErrStyle"]')
+        if error_msg:
+            return error_msg[0].text
+        return None
 
 
 class GS30xSeries(PageParser):
@@ -555,8 +595,9 @@ class GS31xSeries(PageParser):
             "switch_firmware": self._switch_firmware,
         }
 
-    def parse_client_hash(self, page: Response | BaseResponse) -> str | None:  # noqa: ARG002
+    def parse_client_hash(self, page: Response | BaseResponse) -> str | None:
         """Return None as these switches do not have a hash value."""
+        del page
         return None
 
     def parse_port_status(
@@ -688,6 +729,7 @@ PARSERS = {
     "GS105Ev3": GS105Ev3,
     "GS108E": GS108E,
     "GS108Ev3": GS108Ev3,
+    "JGS524Ev2": JGS524Ev2,
     "GS305EP": GS305EP,
     "GS305EPP": GS305EPP,
     "GS308EP": GS308EP,

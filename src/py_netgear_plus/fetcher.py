@@ -9,8 +9,12 @@ import requests.cookies
 from lxml import html
 from requests import Response
 
-from py_netgear_plus.models import AutodetectedSwitchModel, SwitchModelNotDetectedError
-from py_netgear_plus.netgear_crypt import merge_hash
+from py_netgear_plus.models import (
+    AutodetectedSwitchModel,
+    InvalidCryptFunctionError,
+    SwitchModelNotDetectedError,
+)
+from py_netgear_plus.netgear_crypt import hex_hmac_md5, merge_hash
 
 DEFAULT_PAGE = "index.htm"
 URL_REQUEST_TIMEOUT = 15
@@ -38,6 +42,10 @@ class PageNotLoadedError(Exception):
     """Failed to load the page."""
 
 
+class EmptyTemplateParameterError(Exception):
+    """None of the models passed the tests."""
+
+
 class BaseResponse:
     """Base class for response objects."""
 
@@ -54,6 +62,8 @@ class BaseResponse:
 
 class PageFetcher:
     """Class to fetch html pages from switch (or file)."""
+
+    SUBMIT_ID = "pwdLogin"
 
     def __init__(self, host: str) -> None:
         """Initialize PageFetcher Object."""
@@ -151,6 +161,28 @@ class PageFetcher:
             )
         return response
 
+    def set_data_from_template(
+        self, template: dict[str, Any], source: Any, data: dict[str, Any]
+    ) -> None:
+        """Populate data from template using class variables."""
+        if "params" not in template:
+            return
+        for key, value in template["params"].items():
+            try:
+                data[key] = getattr(source, value)
+            except AttributeError as error:
+                message = (
+                    "NetgearSwitchConnector._set_data_from_template: "
+                    f"missing attribute {key} (class variable {value})"
+                )
+                raise EmptyTemplateParameterError(message) from error
+            if not data[key]:
+                message = (
+                    "NetgearSwitchConnector._set_data_from_template: "
+                    f"empty attribute {key} (class variable {value})"
+                )
+                raise EmptyTemplateParameterError(message)
+
     def get_login_response(
         self,
         switch_model: type[AutodetectedSwitchModel],
@@ -160,13 +192,20 @@ class PageFetcher:
         """Login and save returned cookie."""
         if not switch_model or switch_model.MODEL_NAME == "":
             raise SwitchModelNotDetectedError
-        password = merge_hash(login_password, rand) if rand else login_password
+        password = ""
+        if switch_model.CRYPT_FUNCTION == "merge_hash":
+            password = merge_hash(login_password, rand) if rand else login_password
+        elif switch_model.CRYPT_FUNCTION == "hex_hmac_md5":
+            password = hex_hmac_md5(login_password)
+        else:
+            raise InvalidCryptFunctionError(switch_model.CRYPT_FUNCTION)
         response = None
         template = switch_model.LOGIN_TEMPLATE
+        data = {template["key"]: password}
+        self.set_data_from_template(template, self, data)
         url = template["url"].format(ip=self.host)
         method = template["method"]
         data_key = "data" if method.lower() == "post" else "params"
-        key = template["key"]
         allow_redirects = True
         timeout = URL_REQUEST_TIMEOUT
         _LOGGER.debug(
@@ -175,12 +214,12 @@ class PageFetcher:
             method.upper(),
             url,
             data_key,
-            {key: password if rand else "<clear text password>"},
+            data,
             allow_redirects,
             timeout,
         )
         kw_args = {
-            data_key: {key: password},
+            data_key: data,
             "allow_redirects": allow_redirects,
             "timeout": timeout,
         }

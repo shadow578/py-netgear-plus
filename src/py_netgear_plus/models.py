@@ -15,6 +15,10 @@ class PortNumberOutofRangeError(Exception):
     """Port number out of range."""
 
 
+class InvalidCryptFunctionError(Exception):
+    """No implementation for the defined CRYPT_FUNCTION."""
+
+
 class AutodetectedSwitchModel:
     """Netgear Plus Switch Model Definition."""
 
@@ -34,6 +38,7 @@ class AutodetectedSwitchModel:
         {"method": "get", "url": "http://{ip}/"},
     ]
 
+    CRYPT_FUNCTION: ClassVar = "merge_hash"
     LOGIN_TEMPLATE: ClassVar = {
         "method": "post",
         "url": "http://{ip}/login.cgi",
@@ -71,12 +76,14 @@ class AutodetectedSwitchModel:
         """Return list with detection functions."""
         return self.CHECKS_AND_RESULTS
 
-    def get_switch_poe_port_data(self, poe_port: int, state: str) -> dict:  # noqa: ARG002
+    def get_switch_poe_port_data(self, poe__port: int, state: str) -> dict:
         """Return empty dict. Implement on model level."""
+        del poe__port, state
         return {}
 
-    def get_power_cycle_poe_port_data(self, poe_port: int) -> dict:  # noqa: ARG002
+    def get_power_cycle_poe_port_data(self, poe_port: int) -> dict:
         """Return empty dict. Implement on model level."""
+        del poe_port
         return {}
 
 
@@ -135,6 +142,26 @@ class GS108Ev3(AutodetectedSwitchModel):
         ),
     ]
     ALLOWED_COOKIE_TYPES: ClassVar = ["GS108SID", "SID"]
+
+
+class JGS524Ev2(AutodetectedSwitchModel):
+    """Definition for Netgear JGS524Ev2 model."""
+
+    SUPPORTED = False
+    MODEL_NAME = "JGS524Ev2"
+    PORTS = 24
+    CHECKS_AND_RESULTS: ClassVar = [
+        ("check_login_form_rand", [False]),
+        ("parse_first_script_tag", ["JGS524Ev2"]),
+    ]
+    ALLOWED_COOKIE_TYPES: ClassVar = ["JGS524SID", "SID"]
+    CRYPT_FUNCTION: ClassVar = "hex_hmac_md5"
+    LOGIN_TEMPLATE: ClassVar = {
+        "method": "post",
+        "url": "http://{ip}/login.htm",
+        "key": "password",
+        "params": {"submitId": "SUBMIT_ID"},
+    }
 
 
 class GS30xSeries(AutodetectedSwitchModel):
@@ -387,6 +414,7 @@ MODELS = [
     GS105Ev2,
     GS108E,
     GS108Ev3,
+    JGS524Ev2,
     GS305EP,
     GS305EPP,
     GS308EP,
