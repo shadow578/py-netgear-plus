@@ -306,6 +306,9 @@ class PageFetcher:
             return response
         except requests.exceptions.ConnectionError as error:
             raise PageFetcherConnectionError from error
+        except requests.exceptions.ChunkedEncodingError as error:
+            raise PageFetcherConnectionError from error
+
         # Session expired: refresh login cookie and try again
         if response.status_code == status_code_ok and not self._is_authenticated(
             response

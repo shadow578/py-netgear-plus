@@ -192,7 +192,7 @@ class PageParser:
             raise NetgearPlusPageParserError(error_message)
         match_bootloader = self._switch_bootloader in API_V2_CHECKS["bootloader"]
         match_firmware = self._switch_firmware in API_V2_CHECKS["firmware"]
-        return match_bootloader and match_firmware
+        return match_bootloader or match_firmware
 
     def parse_switch_metadata(self, page: Response | BaseResponse) -> dict[str, Any]:
         """Parse switch info from the html page."""

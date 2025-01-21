@@ -19,8 +19,9 @@ from py_netgear_plus.models import (
     GS316EPP,
     AutodetectedSwitchModel,
     GS108Ev3,
+    JGS524Ev2,
 )
-from py_netgear_plus.netgear_crypt import merge_hash
+from py_netgear_plus.netgear_crypt import hex_hmac_md5, merge_hash
 
 # List of models with saved pages, extracted rand values and crypted passwords
 FULLY_TESTED_MODELS = [
@@ -33,12 +34,19 @@ FULLY_TESTED_MODELS = [
         "3c630eb52109743e94ef671e137b3de0",
         '<html><input name="Gambit" value="cookie_value"</html>',
     ),
+    (
+        JGS524Ev2,
+        None,
+        "26fe7cce1e480dd05e7f76155579d3ed",
+        "<html></html>",
+    ),
 ]
 PARTIALLY_TESTED_MODELS = [
-    pytest.param(GS108Ev3, marks=pytest.mark.xfail(reason="no valid data pages")),
+    GS108Ev3,
     GS308EP,
     GS308EPP,
     GS316EPP,
+    pytest.param(JGS524Ev2, marks=pytest.mark.xfail(reason="no valid data pages")),
 ]
 
 TEST_MODELS = [model[0] for model in FULLY_TESTED_MODELS]
@@ -179,7 +187,13 @@ def test_parse_login_form_rand(
         )
         == rand
     )
-    assert merge_hash(password, rand) == crypted_password
+    crypt_function = switch_model.CRYPT_FUNCTION
+    if crypt_function == "hex_hmac_md5":
+        assert hex_hmac_md5(password) == crypted_password
+    elif crypt_function == "merge_hash":
+        assert merge_hash(password, rand) == crypted_password
+    else:
+        pytest.fail(f"Unknown crypt function {crypt_function}")
 
 
 @pytest.mark.parametrize(
@@ -201,7 +215,7 @@ def test_get_unique_id(switch_model: type[AutodetectedSwitchModel]) -> None:
     FULLY_TESTED_MODELS,
 )
 def test_get_login_password(
-    switch_model: type[AutodetectedSwitchModel],
+    switch_model: AutodetectedSwitchModel,
     rand: str,
     crypted_password: str,
     content: str,  # noqa: ARG001
@@ -217,7 +231,13 @@ def test_get_login_password(
         mock_response.status_code = requests.codes.ok
         mock_request.return_value = mock_response
         connector._page_fetcher._login_page_response = mock_response
-        assert merge_hash(password, rand) == crypted_password
+        crypt_function = switch_model.CRYPT_FUNCTION
+        if crypt_function == "hex_hmac_md5":
+            assert hex_hmac_md5(password) == crypted_password
+        elif crypt_function == "merge_hash":
+            assert merge_hash(password, rand) == crypted_password
+        else:
+            pytest.fail(f"Unknown crypt function {crypt_function}")
 
 
 @pytest.mark.parametrize(
@@ -234,11 +254,21 @@ def test_get_login_cookie(
     connector = NetgearSwitchConnector(host="192.168.0.1", password="password")
     connector.turn_on_offline_mode(f"pages/{switch_model.MODEL_NAME}/0")
     connector.autodetect_model()
-    data = {
-        connector.switch_model.LOGIN_TEMPLATE["key"]: merge_hash(
-            connector._password, rand
-        ),
-    }
+
+    key = connector.switch_model.LOGIN_TEMPLATE["key"]
+    crypt_function = switch_model.CRYPT_FUNCTION
+    if crypt_function == "hex_hmac_md5":
+        data = {
+            key: hex_hmac_md5(connector._password),
+            "submitId": "pwdLogin",
+        }
+    elif crypt_function == "merge_hash":
+        data = {
+            key: merge_hash(connector._password, rand),
+        }
+    else:
+        pytest.fail(f"Unknown crypt function {crypt_function}")
+
     with (
         patch("py_netgear_plus.fetcher.requests.request") as mock_request,
     ):

@@ -1,8 +1,8 @@
 """Netgear API."""
 
-import contextlib
 import logging
 import time
+from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
@@ -26,7 +26,7 @@ from .models import (
 )
 from .parsers import NetgearPlusPageParserError, create_page_parser
 
-__version__ = "0.4.1rc0"
+__version__ = "0.4.1rc1"
 
 DEFAULT_PAGE = "index.htm"
 MAX_AUTHENTICATION_FAILURES = 3
@@ -119,12 +119,14 @@ class NetgearSwitchConnector:
             "[NetgearSwitchConnector.autodetect_model] called for IP=%s", self.host
         )
         for template in AutodetectedSwitchModel.AUTODETECT_TEMPLATES:
+            response = None
             url = template["url"].format(ip=self.host)
             method = template["method"]
-            response = self._page_fetcher.request(
-                method,
-                url,
-            )
+            with suppress(PageFetcherConnectionError):
+                response = self._page_fetcher.request(
+                    method,
+                    url,
+                )
 
             if response and self._page_fetcher.has_ok_status(response):
                 passed_checks_by_model = {}
@@ -786,7 +788,7 @@ class NetgearSwitchConnector:
                     template in self.switch_model.SWITCH_INFO_TEMPLATES
                     and not self._client_hash
                 ):
-                    with contextlib.suppress(NetgearPlusPageParserError):
+                    with suppress(NetgearPlusPageParserError):
                         self._client_hash = self._page_parser.parse_client_hash(
                             response
                         )
@@ -807,7 +809,7 @@ class NetgearSwitchConnector:
         for template in self.switch_model.AUTODETECT_TEMPLATES:
             url = template["url"].format(ip=self.host)
             response = BaseResponse()
-            with contextlib.suppress(NotLoggedInError):
+            with suppress(NotLoggedInError):
                 response = self._page_fetcher.request("get", url)
             if self._page_fetcher.has_ok_status(response):
                 page_name = url.split("/")[-1] or DEFAULT_PAGE

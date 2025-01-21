@@ -357,7 +357,6 @@ def parse_command(connector: NetgearSwitchConnector, args: argparse.Namespace) -
     if args.verbose:
         print("Parsing html pages...", file=stderr)  # noqa: T201
     connector.turn_on_offline_mode(args.path)
-    connector.turn_on_offline_mode(args.path)
     switch_infos = connector.get_switch_infos()
     switch_infos["switch_ip"] = "192.168.0.1"
     save_switch_infos(args.path, switch_infos)
