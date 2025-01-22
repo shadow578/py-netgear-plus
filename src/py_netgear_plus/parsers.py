@@ -621,7 +621,9 @@ class GS31xSeries(PageParser):
             port_state_text = xtree_port_statusses[port_nr0].text
             port_attributes = xtree_port_attributes[port_nr0].xpath("./div/div/p")
             modus_speed_text = port_attributes[1].text
-            connection_speed_text = port_attributes[1].text.replace("half", "").strip()
+            connection_speed_text = (
+                port_attributes[3].text.replace("Full", "").replace("Half", "").strip()
+            )
 
             status_by_port[port_nr] = {
                 "status": port_state_text,
@@ -729,11 +731,11 @@ PARSERS = {
     "GS105Ev3": GS105Ev3,
     "GS108E": GS108E,
     "GS108Ev3": GS108Ev3,
-    "JGS524Ev2": JGS524Ev2,
     "GS305EP": GS305EP,
     "GS305EPP": GS305EPP,
     "GS308EP": GS308EP,
     "GS308EPP": GS308EPP,
     "GS316EP": GS316EP,
     "GS316EPP": GS316EPP,
+    "JGS524Ev2": JGS524Ev2,
 }
