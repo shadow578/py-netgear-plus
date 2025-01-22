@@ -1,6 +1,7 @@
 """HTML page retrieval classes."""
 
 import logging
+from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
@@ -99,18 +100,26 @@ class PageFetcher:
                 )
                 self._login_page_response = self.get_page_from_file(url)
             else:
+                method = template["method"]
                 allow_redirects = False
                 timeout = URL_REQUEST_TIMEOUT
                 _LOGGER.debug(
-                    "[PageFetcher.check_login_url] calling request for GET %s"
+                    "[PageFetcher.check_login_url] calling request for %s %s"
                     " with allow_directs=%s, timeout=%d",
+                    method.upper(),
                     url,
                     allow_redirects,
                     timeout,
                 )
-                self._login_page_response = requests.request(
-                    "get", url, allow_redirects=allow_redirects, timeout=timeout
-                )
+                with suppress(
+                    requests.exceptions.Timeout,
+                    requests.exceptions.ConnectionError,
+                    requests.exceptions.ChunkedEncodingError,
+                ):
+                    self._login_page_response = requests.request(
+                        method, url, allow_redirects=allow_redirects, timeout=timeout
+                    )
+
             if self.has_ok_status(self._login_page_response):
                 return True
         message = f"Failed to load any page of templates: {templates}"
@@ -316,6 +325,6 @@ class PageFetcher:
             raise NotLoggedInError
         return response
 
-    def has_ok_status(self, response: Response | BaseResponse) -> bool:
+    def has_ok_status(self, response: Response | BaseResponse | None) -> bool:
         """Check if response has status code 200."""
-        return response.status_code == status_code_ok
+        return response is not None and response.status_code == status_code_ok

@@ -414,11 +414,11 @@ MODELS = [
     GS105Ev2,
     GS108E,
     GS108Ev3,
-    JGS524Ev2,
     GS305EP,
     GS305EPP,
     GS308EP,
     GS308EPP,
     GS316EP,
     GS316EPP,
+    JGS524Ev2,
 ]
