@@ -144,26 +144,6 @@ class GS108Ev3(AutodetectedSwitchModel):
     ALLOWED_COOKIE_TYPES: ClassVar = ["GS108SID", "SID"]
 
 
-class JGS524Ev2(AutodetectedSwitchModel):
-    """Definition for Netgear JGS524Ev2 model."""
-
-    SUPPORTED = False
-    MODEL_NAME = "JGS524Ev2"
-    PORTS = 24
-    CHECKS_AND_RESULTS: ClassVar = [
-        ("check_login_form_rand", [False]),
-        ("parse_first_script_tag", ["JGS524Ev2"]),
-    ]
-    ALLOWED_COOKIE_TYPES: ClassVar = ["JGS524SID", "SID"]
-    CRYPT_FUNCTION: ClassVar = "hex_hmac_md5"
-    LOGIN_TEMPLATE: ClassVar = {
-        "method": "post",
-        "url": "http://{ip}/login.htm",
-        "key": "password",
-        "params": {"submitId": "SUBMIT_ID"},
-    }
-
-
 class GS30xSeries(AutodetectedSwitchModel):
     """Parent class definition for Netgear GS3xx series."""
 
@@ -360,7 +340,7 @@ class GS316EP(GS30xSeries):
         {
             "method": "get",
             "url": "http://{ip}/iss/specific/poePortStatus.html",
-            "params": {"Gambit": "_gambit", "GetData": "TRUE"},
+            "params": {"Gambit": "_gambit", "GetData": "literal:TRUE"},
         }
     ]
     LOGOUT_TEMPLATES: ClassVar = [
@@ -407,6 +387,25 @@ class GS316EPP(GS316EP):
         ("check_login_form_rand", [True]),
         ("parse_login_title_tag", ["GS316EPP"]),
     ]
+
+
+class JGS524Ev2(AutodetectedSwitchModel):
+    """Definition for Netgear JGS524Ev2 model."""
+
+    SUPPORTED = False
+    MODEL_NAME = "JGS524Ev2"
+    PORTS = 24
+    CHECKS_AND_RESULTS: ClassVar = [
+        ("check_login_form_rand", [False]),
+        ("parse_first_script_tag", ["JGS524Ev2"]),
+    ]
+    CRYPT_FUNCTION: ClassVar = "hex_hmac_md5"
+    LOGIN_TEMPLATE: ClassVar = {
+        "method": "post",
+        "url": "http://{ip}/login.htm",
+        "key": "password",
+        "params": {"submitId": "literal:pwdLogin", "submitEnd": "literal:"},
+    }
 
 
 MODELS = [

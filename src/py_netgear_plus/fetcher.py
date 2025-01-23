@@ -64,8 +64,6 @@ class BaseResponse:
 class PageFetcher:
     """Class to fetch html pages from switch (or file)."""
 
-    SUBMIT_ID = "pwdLogin"
-
     def __init__(self, host: str) -> None:
         """Initialize PageFetcher Object."""
         self.host = host
@@ -177,20 +175,23 @@ class PageFetcher:
         if "params" not in template:
             return
         for key, value in template["params"].items():
-            try:
-                data[key] = getattr(source, value)
-            except AttributeError as error:
-                message = (
-                    "NetgearSwitchConnector._set_data_from_template: "
-                    f"missing attribute {key} (class variable {value})"
-                )
-                raise EmptyTemplateParameterError(message) from error
-            if not data[key]:
-                message = (
-                    "NetgearSwitchConnector._set_data_from_template: "
-                    f"empty attribute {key} (class variable {value})"
-                )
-                raise EmptyTemplateParameterError(message)
+            if value.startswith("literal:"):
+                data[key] = value[8:]
+            else:
+                try:
+                    data[key] = getattr(source, value)
+                except AttributeError as error:
+                    message = (
+                        "NetgearSwitchConnector._set_data_from_template: "
+                        f"missing attribute {key} (class variable {value})"
+                    )
+                    raise EmptyTemplateParameterError(message) from error
+                if not data[key]:
+                    message = (
+                        "NetgearSwitchConnector._set_data_from_template: "
+                        f"empty attribute {key} (class variable {value})"
+                    )
+                    raise EmptyTemplateParameterError(message)
 
     def get_login_response(
         self,

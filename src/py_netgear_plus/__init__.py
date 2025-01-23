@@ -26,7 +26,7 @@ from .models import (
 )
 from .parsers import NetgearPlusPageParserError, create_page_parser
 
-__version__ = "0.4.2rc0"
+__version__ = "0.4.2rc1"
 
 DEFAULT_PAGE = "index.htm"
 MAX_AUTHENTICATION_FAILURES = 3
@@ -56,8 +56,6 @@ class InvalidPoEPortError(Exception):
 
 class NetgearSwitchConnector:
     """Representation of a Netgear Switch."""
-
-    TRUE = "TRUE"
 
     def __init__(self, host: str, password: str) -> None:
         """Initialize Connector Object."""

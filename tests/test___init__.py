@@ -261,6 +261,7 @@ def test_get_login_cookie(
         data = {
             key: hex_hmac_md5(connector._password),
             "submitId": "pwdLogin",
+            "submitEnd": "",
         }
     elif crypt_function == "merge_hash":
         data = {
