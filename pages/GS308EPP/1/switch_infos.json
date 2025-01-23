@@ -4,6 +4,7 @@
   "switch_serial_number": "1234567890ABC",
   "switch_bootloader": "unknown",
   "switch_firmware": "V1.0.1.4",
+  "led_status": "on",
   "port_1_status": "off",
   "port_1_modus_speed": true,
   "port_1_connection_speed": 0,

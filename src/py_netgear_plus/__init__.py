@@ -26,7 +26,7 @@ from .models import (
 )
 from .parsers import NetgearPlusPageParserError, create_page_parser
 
-__version__ = "0.4.2rc1"
+__version__ = "0.4.2rc2"
 
 DEFAULT_PAGE = "index.htm"
 MAX_AUTHENTICATION_FAILURES = 3
@@ -441,13 +441,16 @@ class NetgearSwitchConnector:
         page = self.fetch_page_from_templates(self.switch_model.SWITCH_INFO_TEMPLATES)
         if not page.content:
             return
-
+        switch_metadata = {"switch_ip": self.host}
         self._client_hash = self._page_parser.parse_client_hash(page)
 
+        if self.switch_model.SWITCH_LED_TEMPLATES:
+            switch_metadata.update(self._page_parser.parse_led_status(page))
+
         # Avoid a second call on next get_switch_infos() call
-        self._loaded_switch_metadata = {
-            "switch_ip": self.host
-        } | self._page_parser.parse_switch_metadata(page)
+        self._loaded_switch_metadata = (
+            switch_metadata | self._page_parser.parse_switch_metadata(page)
+        )
 
     def _get_port_statistics(self) -> dict[str, Any]:
         response = self.fetch_page_from_templates(
@@ -684,6 +687,50 @@ class NetgearSwitchConnector:
                 )
                 raise InvalidPortStatusError(message)
         return switch_data
+
+    def switch_leds(self, state: str) -> bool:
+        """Switch poe port on or off."""
+        if not self.switch_model.SWITCH_LED_TEMPLATES:
+            message = "No LED templates found."
+            raise NotImplementedError(message)
+        if state not in SWITCH_STATES:
+            message = f'State "{state}" not in {SWITCH_STATES}.'
+            raise InvalidSwitchStateError(message)
+        for template in self.switch_model.SWITCH_LED_TEMPLATES:
+            url = template["url"].format(ip=self.host)
+            method = template["method"]
+            data = self.switch_model.get_switch_led_data(state)  # type: ignore[report-call-issue]
+            self._page_fetcher.set_data_from_template(template, self, data)
+            _LOGGER.debug("switch_leds data=%s", data)
+            response = BaseResponse
+            try:
+                response = self._page_fetcher.request(method, url, data)
+            except NotLoggedInError as error:
+                if self.get_login_cookie():
+                    response = self._page_fetcher.request(method, url, data)
+                else:
+                    message = "Not logged in and unable to login."
+                    raise LoginFailedError(message) from error
+            if (
+                self._page_fetcher.has_ok_status(response)
+                and str(response.content.strip()) == "b'SUCCESS'"
+            ):
+                # Clear cached metadata to refetch led status on next poll
+                self._loaded_switch_metadata = {}
+                return True
+            _LOGGER.warning(
+                "NetgearSwitchConnector.switch_leds response was %s",
+                response.content.strip(),
+            )
+        return False
+
+    def turn_on_leds(self) -> bool:
+        """Turn on front panel LEDs."""
+        return self.switch_leds("on")
+
+    def turn_off_leds(self) -> bool:
+        """Turn off front panel LEDs."""
+        return self.switch_leds("off")
 
     def switch_poe_port(self, poe_port: int, state: str) -> bool:
         """Switch poe port on or off."""

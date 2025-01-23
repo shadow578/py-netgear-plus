@@ -220,6 +220,10 @@ class PageParser:
         tree = html.fromstring(page.content)
         return get_first_value(tree, '//input[@name="hash"]')
 
+    def parse_led_status(self, page: Response | BaseResponse) -> dict[str, Any]:
+        """Parse status of the front panel LEDs from the html page."""
+        raise NotImplementedError
+
     def parse_port_status(
         self, page: Response | BaseResponse, ports: int
     ) -> dict[int, dict[str, Any]]:
@@ -371,28 +375,6 @@ class GS108Ev3(PageParser):
         super().__init__()
 
 
-class JGS524Ev2(PageParser):
-    """Parser for the GS108E v3switch."""
-
-    def __init__(self) -> None:
-        """Initialize the GS108E parser."""
-        super().__init__()
-
-    def parse_switch_metadata(self, page: Response | BaseResponse) -> dict[str, Any]:
-        """Parse switch info from the html page."""
-        del page
-        message = "Switch metadata is not supported for JGS524Ev2 switch."
-        raise NotImplementedError(message)
-
-    def parse_error(self, page: Response | BaseResponse) -> str | None:
-        """Parse error from the html page."""
-        tree = html.fromstring(page.content)
-        error_msg = tree.xpath('//div[@class="pwdErrStyle"]')
-        if error_msg:
-            return error_msg[0].text
-        return None
-
-
 class GS30xSeries(PageParser):
     """Parser for the GS30x switch series."""
 
@@ -419,6 +401,12 @@ class GS30xSeries(PageParser):
             "switch_bootloader": self._switch_bootloader,
             "switch_firmware": self._switch_firmware,
         }
+
+    def parse_led_status(self, page: Response | BaseResponse) -> dict[str, Any]:
+        """Parse status of the front panel LEDs from the html page."""
+        tree = html.fromstring(page.content)
+        led_status = get_first_text(tree, '//span[@id="led_switch"]')
+        return {"led_status": "on" if led_status == "ON" else "off"}
 
     def parse_port_status(
         self, page: Response | BaseResponse, ports: int
@@ -723,6 +711,28 @@ class GS316EPP(GS31xSeries):
     def __init__(self) -> None:
         """Initialize the GS316EPP parser."""
         super().__init__()
+
+
+class JGS524Ev2(PageParser):
+    """Parser for the GS108E v3switch."""
+
+    def __init__(self) -> None:
+        """Initialize the GS108E parser."""
+        super().__init__()
+
+    def parse_switch_metadata(self, page: Response | BaseResponse) -> dict[str, Any]:
+        """Parse switch info from the html page."""
+        del page
+        message = "Switch metadata is not supported for JGS524Ev2 switch."
+        raise NotImplementedError(message)
+
+    def parse_error(self, page: Response | BaseResponse) -> str | None:
+        """Parse error from the html page."""
+        tree = html.fromstring(page.content)
+        error_msg = tree.xpath('//div[@class="pwdErrStyle"]')
+        if error_msg:
+            return error_msg[0].text
+        return None
 
 
 PARSERS = {

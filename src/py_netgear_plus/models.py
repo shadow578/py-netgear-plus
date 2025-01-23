@@ -49,6 +49,7 @@ class AutodetectedSwitchModel:
         {"method": "get", "url": "http://{ip}/switch_info.htm"},
         {"method": "get", "url": "http://{ip}/switch_info.cgi"},
     ]
+    SWITCH_LED_TEMPLATES: ClassVar = []
     PORT_STATISTICS_TEMPLATES: ClassVar = [
         {
             "method": "post",
@@ -84,6 +85,11 @@ class AutodetectedSwitchModel:
     def get_power_cycle_poe_port_data(self, poe_port: int) -> dict:
         """Return empty dict. Implement on model level."""
         del poe_port
+        return {}
+
+    def get_switch_led_data(self, state: str) -> dict:
+        """Return empty dict. Implement on model level."""
+        del state
         return {}
 
 
@@ -150,6 +156,13 @@ class GS30xSeries(AutodetectedSwitchModel):
     SWITCH_INFO_TEMPLATES: ClassVar = [
         {"method": "get", "url": "http://{ip}/dashboard.cgi"}
     ]
+    SWITCH_LED_TEMPLATES: ClassVar = [
+        {
+            "method": "post",
+            "url": "http://{ip}/port_led.cgi",
+            "params": {"hash": "_client_hash"},
+        }
+    ]
     PORT_STATUS_TEMPLATES: ClassVar = SWITCH_INFO_TEMPLATES
     PORT_STATISTICS_TEMPLATES: ClassVar = [
         {"method": "get", "url": "http://{ip}/portStatistics.cgi"}
@@ -193,6 +206,12 @@ class GS30xSeries(AutodetectedSwitchModel):
         return {
             "ACTION": "Reset",
             "port" + str(poe_port - 1): "checked",
+        }
+
+    def get_switch_led_data(self, state: str) -> dict:
+        """Return empty dict. Implement on model level."""
+        return {
+            "portled": 0 if state == "on" else 2,
         }
 
 
@@ -307,6 +326,7 @@ class GS316EP(GS30xSeries):
             "params": {"Gambit": "_gambit"},
         }
     ]
+    SWITCH_LED_TEMPLATES: ClassVar = []
     PORT_STATUS_TEMPLATES: ClassVar = SWITCH_INFO_TEMPLATES
     PORT_STATISTICS_TEMPLATES: ClassVar = [
         {
