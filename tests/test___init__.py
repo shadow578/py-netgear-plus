@@ -251,16 +251,26 @@ def test_get_login_cookie(
     content: str,
 ) -> None:
     """Test get_login_cookie method."""
-    connector = NetgearSwitchConnector(host="192.168.0.1", password="password")
+    connector = NetgearSwitchConnector(host="192.168.0.1", password="Password1")
     connector.turn_on_offline_mode(f"pages/{switch_model.MODEL_NAME}/0")
     connector.autodetect_model()
+    connector._page_fetcher.check_login_url(connector.switch_model)
+    connector.turn_on_online_mode()
 
-    key = connector.switch_model.LOGIN_TEMPLATE["key"]
+    key = next(
+        (
+            k
+            for k, v in connector.switch_model.LOGIN_TEMPLATE["params"].items()
+            if v == "_password_hash"
+        ),
+        None,
+    )
+
     crypt_function = switch_model.CRYPT_FUNCTION
     if crypt_function == "hex_hmac_md5":
         data = {
-            key: hex_hmac_md5(connector._password),
             "submitId": "pwdLogin",
+            key: hex_hmac_md5(connector._password),
             "submitEnd": "",
         }
     elif crypt_function == "merge_hash":

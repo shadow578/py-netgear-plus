@@ -298,7 +298,7 @@ class PageParser:
     def parse_port_statistics_v2(
         self, page: Response | BaseResponse, ports: int
     ) -> dict[str, Any]:
-        """Parse port status from the html page."""
+        """Parse port statistics from the html page."""
         tree = html.fromstring(page.content)
         rx_elems = tree.xpath('//input[@name="rxPkt"]')
         tx_elems = tree.xpath('//input[@name="txpkt"]')
@@ -716,15 +716,92 @@ class GS316EPP(GS31xSeries):
 class JGS524Ev2(PageParser):
     """Parser for the GS108E v3switch."""
 
+    META_DATA_PARTS = 9
+    META_DATA_NAME = 1
+    META_DATA_SERIAL_NUMBER = 8
+    META_DATA_FIRMWARE = 3
+
     def __init__(self) -> None:
         """Initialize the GS108E parser."""
         super().__init__()
 
     def parse_switch_metadata(self, page: Response | BaseResponse) -> dict[str, Any]:
         """Parse switch info from the html page."""
-        del page
-        message = "Switch metadata is not supported for JGS524Ev2 switch."
-        raise NotImplementedError(message)
+        switch_metadata = []
+        result = re.search("sysGeneInfor = '([^']+)';", page.content.decode("utf8"))
+        if result:
+            switch_metadata = result.group(1).split("?")
+        if len(switch_metadata) != self.META_DATA_PARTS:
+            message = (
+                "Switch metadata contains"
+                f" {len(switch_metadata)} elements instead of "
+                f"{self.META_DATA_PARTS}: {switch_metadata}"
+            )
+            raise NetgearPlusPageParserError(message)
+
+        switch_name = switch_metadata[self.META_DATA_NAME]
+        switch_serial_number = switch_metadata[self.META_DATA_SERIAL_NUMBER]
+        self._switch_bootloader = "unknown"
+        self._switch_firmware = switch_metadata[self.META_DATA_FIRMWARE]
+
+        return {
+            "switch_name": switch_name,
+            "switch_serial_number": switch_serial_number,
+            "switch_bootloader": self._switch_bootloader,
+            "switch_firmware": self._switch_firmware,
+        }
+
+    def parse_client_hash(self, page: Response | BaseResponse) -> str | None:
+        """Parse the client hash from the html page."""
+        result = re.search("secureRand = '([^']+)';", page.content.decode("utf8"))
+        if result and len(result.groups()):
+            return result.group(1)
+        return None
+
+    def parse_port_status(
+        self, page: Response | BaseResponse, ports: int
+    ) -> dict[int, dict[str, Any]]:
+        """Parse port status from the html page."""
+        del page, ports
+        _LOGGER.warning(
+            "Port status is not implemented for this switch. Returning empty dict."
+        )
+        return {}
+
+    def parse_port_statistics(
+        self, page: Response | BaseResponse, ports: int
+    ) -> dict[str, Any]:
+        """Parse port statistics from the html page."""
+        result = re.findall(
+            r"StatisticsEntry\[([0-9]+)\] = '([^']+)';", page.content.decode("utf8")
+        )
+        if len(result) != ports:
+            message = (
+                "Port count mismatch: Expected %s, got %s",
+                ports,
+                len(result),
+            )
+            raise NetgearPlusPageParserError(message)
+
+        rx = []
+        tx = []
+        crc = []
+
+        for port_nr in range(ports):
+            statistics_entry = result[port_nr][1].split("?")
+            rx.append(int(statistics_entry[1]))
+            tx.append(int(statistics_entry[2]))
+            crc.append(int(statistics_entry[3]))
+
+        io_zeros = [0] * ports
+        return {
+            "traffic_rx": rx,
+            "traffic_tx": tx,
+            "sum_rx": rx,
+            "sum_tx": tx,
+            "crc_errors": crc,
+            "speed_io": io_zeros,
+        }
 
     def parse_error(self, page: Response | BaseResponse) -> str | None:
         """Parse error from the html page."""

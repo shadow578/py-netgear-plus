@@ -26,7 +26,7 @@ from .models import (
 )
 from .parsers import NetgearPlusPageParserError, create_page_parser
 
-__version__ = "0.4.2rc2"
+__version__ = "0.4.2rc3"
 
 DEFAULT_PAGE = "index.htm"
 MAX_AUTHENTICATION_FAILURES = 3
@@ -202,7 +202,9 @@ class NetgearSwitchConnector:
         model_lower = self.switch_model.MODEL_NAME.lower()
         return model_lower + "_" + self.host.replace(".", "_")
 
-    def _handle_soft_authentication_failure(self, response: Response) -> None:
+    def _handle_soft_authentication_failure(
+        self, response: Response | BaseResponse
+    ) -> None:
         """Handle soft authentication failure."""
         # Clear cached login data
         self._page_fetcher.clear_login_page_response()
@@ -243,16 +245,6 @@ class NetgearSwitchConnector:
             self._page_fetcher.get_login_page_response()
         )
 
-        if rand:
-            _LOGGER.debug(
-                "[NetgearSwitchConnector.get_login_cookie]"
-                " using password crypted with rand=%s",
-                rand,
-            )
-        else:
-            _LOGGER.debug(
-                "[NetgearSwitchConnector.get_login_cookie] using password in plain text"
-            )
         response = self._page_fetcher.get_login_response(
             self.switch_model, self._password, rand
         )

@@ -69,6 +69,7 @@ class PageFetcher:
         self.host = host
         # cached login page response
         self._login_page_response = None
+        self._password_hash = None
 
         # login cookie
         self._cookie_name = None
@@ -130,6 +131,7 @@ class PageFetcher:
     def clear_login_page_response(self) -> None:
         """Return cached login page."""
         self._login_page_response = None
+        self._password_hash = None
 
     def get_cookie(self) -> tuple[str | None, str | None]:
         """Get cookie."""
@@ -198,46 +200,36 @@ class PageFetcher:
         switch_model: type[AutodetectedSwitchModel],
         login_password: str,
         rand: str | None,
-    ) -> Response:
+    ) -> Response | BaseResponse:
         """Login and save returned cookie."""
         if not switch_model or switch_model.MODEL_NAME == "":
             raise SwitchModelNotDetectedError
-        password = ""
-        if switch_model.CRYPT_FUNCTION == "merge_hash":
-            password = merge_hash(login_password, rand) if rand else login_password
+        if switch_model.CRYPT_FUNCTION == "merge_hash" and not rand:
+            self._password_hash = login_password
+            _LOGGER.debug(
+                "[PageFetcher.get_login_response] no rand: use plaintext password"
+            )
+        elif switch_model.CRYPT_FUNCTION == "merge_hash" and rand:
+            self._password_hash = merge_hash(login_password, rand)
+            _LOGGER.debug(
+                "[PageFetcher.get_login_response] use merge_hash password with rand=%s",
+                rand,
+            )
         elif switch_model.CRYPT_FUNCTION == "hex_hmac_md5":
-            password = hex_hmac_md5(login_password)
+            self._password_hash = hex_hmac_md5(login_password)
+            _LOGGER.debug(
+                "[PageFetcher.get_login_response] use hex_hmac_md5 password",
+            )
         else:
             raise InvalidCryptFunctionError(switch_model.CRYPT_FUNCTION)
         response = None
         template = switch_model.LOGIN_TEMPLATE
-        data = {template["key"]: password}
-        self.set_data_from_template(template, self, data)
         url = template["url"].format(ip=self.host)
         method = template["method"]
-        data_key = "data" if method.lower() == "post" else "params"
+        data = {}
+        self.set_data_from_template(template, self, data)
         allow_redirects = True
-        timeout = URL_REQUEST_TIMEOUT
-        _LOGGER.debug(
-            "[PageFetcher.get_login_page] calling request for %s %s"
-            " with %s=%s, allow_redirects=%s, timeout=%d",
-            method.upper(),
-            url,
-            data_key,
-            data,
-            allow_redirects,
-            timeout,
-        )
-        kw_args = {
-            data_key: data,
-            "allow_redirects": allow_redirects,
-            "timeout": timeout,
-        }
-        response = requests.request(  # noqa: S113
-            method,
-            url,
-            **kw_args,
-        )
+        response = self.request(method, url, data=data, allow_redirects=allow_redirects)
         if not response or response.status_code != status_code_ok:
             raise LoginFailedError
 
@@ -277,11 +269,18 @@ class PageFetcher:
             return self.get_page_from_file(url)
         if timeout == 0:
             timeout = URL_REQUEST_TIMEOUT
-        jar = requests.cookies.RequestsCookieJar()
         response = Response()
+        kwargs = {}
         data_key = "data" if method == "post" else "params"
         if self._cookie_name and self._cookie_content:
+            jar = requests.cookies.RequestsCookieJar()
             jar.set(self._cookie_name, self._cookie_content, domain=self.host, path="/")
+            kwargs = {
+                data_key: data,
+                "cookies": jar,
+                "allow_redirects": allow_redirects,
+                "timeout": timeout,
+            }
             _LOGGER.debug(
                 "[PageFetcher.request] calling %s %s with %s cookie"
                 " with %s=%s, allow_redirects=%s, timeout=%d",
@@ -294,6 +293,11 @@ class PageFetcher:
                 timeout,
             )
         else:
+            kwargs = {
+                data_key: data,
+                "allow_redirects": allow_redirects,
+                "timeout": timeout,
+            }
             _LOGGER.debug(
                 "[PageFetcher.request] calling %s %s without cookie"
                 " with %s=%s, allow_redirects=%s, timeout=%d",
@@ -304,12 +308,6 @@ class PageFetcher:
                 allow_redirects,
                 timeout,
             )
-        kwargs = {
-            data_key: data,
-            "cookies": jar,
-            "timeout": timeout,
-            "allow_redirects": allow_redirects,
-        }
         try:
             response = requests.request(method, url, **kwargs)  # noqa: S113
         except requests.exceptions.Timeout:

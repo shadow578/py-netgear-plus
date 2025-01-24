@@ -42,7 +42,7 @@ class AutodetectedSwitchModel:
     LOGIN_TEMPLATE: ClassVar = {
         "method": "post",
         "url": "http://{ip}/login.cgi",
-        "key": "password",
+        "params": {"password": "_password_hash"},
     }
 
     SWITCH_INFO_TEMPLATES: ClassVar = [
@@ -316,7 +316,7 @@ class GS316EP(GS30xSeries):
     LOGIN_TEMPLATE: ClassVar = {
         "method": "post",
         "url": "http://{ip}/homepage.html",
-        "key": "LoginPassword",
+        "params": {"LoginPassword": "_password_hash"},
     }
     ALLOWED_COOKIE_TYPES: ClassVar = ["gambitCookie"]
     SWITCH_INFO_TEMPLATES: ClassVar = [
@@ -423,9 +423,27 @@ class JGS524Ev2(AutodetectedSwitchModel):
     LOGIN_TEMPLATE: ClassVar = {
         "method": "post",
         "url": "http://{ip}/login.htm",
-        "key": "password",
-        "params": {"submitId": "literal:pwdLogin", "submitEnd": "literal:"},
+        "params": {
+            "submitId": "literal:pwdLogin",
+            "password": "_password_hash",
+            "submitEnd": "literal:",
+        },
     }
+    SWITCH_INFO_TEMPLATES: ClassVar = [
+        {
+            "method": "post",
+            "url": "http://{ip}/status_switch_info.htm",
+            "params": {"secureRand": "_client_hash"},
+        },
+    ]
+    PORT_STATUS_TEMPLATES: ClassVar = []
+    PORT_STATISTICS_TEMPLATES: ClassVar = [
+        {
+            "method": "post",
+            "url": "http://{ip}/monitoring_port_statistics.htm",
+            "params": {"secureRand": "_client_hash"},
+        }
+    ]
 
 
 MODELS = [
