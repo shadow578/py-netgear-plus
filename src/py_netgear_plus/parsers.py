@@ -65,6 +65,11 @@ def get_text_from_next_element(tree: html.HtmlElement, xpath: str) -> str:
         raise NetgearPlusPageParserError(message) from error
 
 
+def strip_duplex(text: str) -> str:
+    """Strip duplex from text."""
+    return re.sub(r"full|half", "", text, flags=re.IGNORECASE).strip()
+
+
 # convert to int
 def convert_to_int(
     lst: list,
@@ -431,11 +436,8 @@ class GS30xSeries(PageParser):
             modus_speed_text = tree.xpath('//input[@class="Speed"]')[port0].value
             if modus_speed_text == "1":
                 modus_speed_text = "Auto"
-            connection_speed_text = tree.xpath('//input[@class="LinkedSpeed"]')[
-                port0
-            ].value
-            connection_speed_text = (
-                connection_speed_text.replace("full", "").replace("half", "").strip()
+            connection_speed_text = strip_duplex(
+                tree.xpath('//input[@class="LinkedSpeed"]')[port0].value
             )
 
             status_by_port[port_nr] = {
@@ -617,9 +619,7 @@ class GS31xSeries(PageParser):
             port_state_text = xtree_port_statusses[port_nr0].text
             port_attributes = xtree_port_attributes[port_nr0].xpath("./div/div/p")
             modus_speed_text = port_attributes[1].text
-            connection_speed_text = (
-                port_attributes[3].text.replace("Full", "").replace("Half", "").strip()
-            )
+            connection_speed_text = strip_duplex(port_attributes[3].text)
 
             status_by_port[port_nr] = {
                 "status": port_state_text,
@@ -770,11 +770,31 @@ class JGS524Ev2(PageParser):
         self, page: Response | BaseResponse, ports: int
     ) -> dict[int, dict[str, Any]]:
         """Parse port status from the html page."""
-        del page, ports
-        _LOGGER.warning(
-            "Port status is not implemented for this switch. Returning empty dict."
+        result = re.findall(
+            r"portConfigEntry\[([0-9]+)\] = '([^']+)';", page.content.decode("utf8")
         )
-        return {}
+        if len(result) != ports:
+            message = (
+                "Port count mismatch: Expected %s, got %s",
+                ports,
+                len(result),
+            )
+            raise NetgearPlusPageParserError(message)
+
+        status_by_port = {}
+        for status in result:
+            port_nr = int(status[0]) + 1
+            modus_speed_text = status[1].split("?")[3]
+            port_state_text = status[1].split("?")[2]
+            connection_speed_text = strip_duplex(status[1].split("?")[4])
+
+            status_by_port[port_nr] = {
+                "status": port_state_text,
+                "modus_speed": modus_speed_text,
+                "connection_speed": connection_speed_text,
+            }
+
+        return status_by_port
 
     def parse_port_statistics(
         self, page: Response | BaseResponse, ports: int
