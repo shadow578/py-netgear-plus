@@ -60,11 +60,6 @@ class AutodetectedSwitchModel:
     PORT_STATUS_TEMPLATES: ClassVar = [
         {
             "method": "post",
-            "url": "http://{ip}/status.cgi",
-            "params": {"hash": "_client_hash"},
-        },
-        {
-            "method": "post",
             "url": "http://{ip}/status.htm",
             "params": {"hash": "_client_hash"},
         }
@@ -128,6 +123,12 @@ class GS105PE(AutodetectedSwitchModel):
     CHECKS_AND_RESULTS: ClassVar = [
         ("check_login_form_rand", [True]),
         ("parse_login_title_tag", ["GS105PE"]),
+    ]
+    PORT_STATUS_TEMPLATES: ClassVar = [
+        {
+            "method": "get",
+            "url": "http://{ip}/status.cgi",
+        }
     ]
 
 

@@ -12,13 +12,8 @@ from .fetcher import BaseResponse
 _LOGGER = logging.getLogger(__name__)
 
 API_V2_CHECKS = {
-    "bootloader": ["V1.00.03", "V2.06.01", "V2.06.02", "V2.06.03"],
-    "firmware": ["V2.06.24GR", "V2.06.24EN"],
-}
-
-API_V2B_CHECKS = {
-    "bootloader": ["V1.6.0.2-VB"],
-    "firmware": ["V1.6.0.17"],
+    "bootloader": ["V1.00.03", "V2.06.01", "V2.06.02", "V2.06.03", "V1.6.0.2-VB"],
+    "firmware": ["V2.06.24GR", "V2.06.24EN", "V1.6.0.17"],
 }
 
 POE_PORT_ENABLED_STATUS = ["enable", "aktiv"]
@@ -133,8 +128,8 @@ class PageParser:
         return bool(self.parse_login_form_rand(page))
 
     def parse_login_title_tag(self, page: Response | BaseResponse) -> str | None:
-        """Return the title tag from the login page."""
-        """For new firmwares V2.06.10, V2.06.17, V2.06.24."""
+        """Return the title tag from the login page.
+           For new firmwares V2.06.10, V2.06.17, V2.06.24."""
         if page is not None and page.content:
             tree = html.fromstring(page.content)
             title_elems = tree.xpath("//title")
@@ -144,10 +139,10 @@ class PageParser:
         return None
 
     def parse_login_switchinfo_tag(self, page: Response | BaseResponse) -> str | None:
-        """Return the title tag from the login page."""
-        """For old firmware V2.00.05, return """ ""
-        """or something like: "GS108Ev3 - 8-Port Gigabit ProSAFE Plus Switch"."""
-        """Newer firmwares contains that too."""
+        """Return the title tag from the login page.
+           For old firmware V2.00.05, return ""
+           or something like: "GS108Ev3 - 8-Port Gigabit ProSAFE Plus Switch".
+           Newer firmwares contains that too."""
         if page is not None and page.content:
             tree = html.fromstring(page.content)
             switchinfo_elems = tree.xpath('//div[@class="switchInfo"]')
@@ -199,18 +194,6 @@ class PageParser:
         match_firmware = self._switch_firmware in API_V2_CHECKS["firmware"]
         return match_bootloader or match_firmware
 
-    def has_api_v2b(self) -> bool:
-        """Check if the switch has API v2."""
-        if not self._switch_firmware or not self._switch_bootloader:
-            error_message = (
-                "Firmware or bootloader version not set. "
-                "Call parse_switch_metadata first."
-            )
-            raise NetgearPlusPageParserError(error_message)
-        match_bootloader = self._switch_bootloader in API_V2B_CHECKS["bootloader"]
-        match_firmware = self._switch_firmware in API_V2B_CHECKS["firmware"]
-        return match_bootloader or match_firmware
-
     def parse_switch_metadata(self, page: Response | BaseResponse) -> dict[str, Any]:
         """Parse switch info from the html page."""
         tree = html.fromstring(page.content)
@@ -247,18 +230,12 @@ class PageParser:
         """Parse port status from the html page."""
         status_by_port = {}
 
-        if self.has_api_v2() or self.has_api_v2b():
+        if self.has_api_v2():
             tree = html.fromstring(page.content)
-            if get_text_from_next_element(tree, '//td[text()="Port"]') == "Port Description":
-                _port_elems = tree.xpath('//tr[@class="portID"]/td[3]')
-                portstatus_elems = tree.xpath('//tr[@class="portID"]/td[4]')
-                portspeed_elems = tree.xpath('//tr[@class="portID"]/td[5]')
-                portconnectionspeed_elems = tree.xpath('//tr[@class="portID"]/td[6]')
-            else:
-                _port_elems = tree.xpath('//tr[@class="portID"]/td[2]')
-                portstatus_elems = tree.xpath('//tr[@class="portID"]/td[3]')
-                portspeed_elems = tree.xpath('//tr[@class="portID"]/td[4]')
-                portconnectionspeed_elems = tree.xpath('//tr[@class="portID"]/td[5]')
+            _port_elems = tree.xpath('//tr[@class="portID"]/td[2]')
+            portstatus_elems = tree.xpath('//tr[@class="portID"]/td[3]')
+            portspeed_elems = tree.xpath('//tr[@class="portID"]/td[4]')
+            portconnectionspeed_elems = tree.xpath('//tr[@class="portID"]/td[5]')
 
             for port_nr in range(ports):
                 try:
@@ -293,8 +270,6 @@ class PageParser:
         """Parse port statistics from the html page."""
         if self.has_api_v2():
             return self.parse_port_statistics_v2(page, ports)
-        if self.has_api_v2b():
-            return self.parse_port_statistics_v2b(page, ports)
         return self.parse_port_statistics_v1(page, ports)
 
     def parse_port_statistics_v1(
@@ -333,32 +308,6 @@ class PageParser:
         rx = convert_to_int(rx_elems, output_elems=ports, base=16, attr_name="value")
         tx = convert_to_int(tx_elems, output_elems=ports, base=16, attr_name="value")
         crc = convert_to_int(crc_elems, output_elems=ports, base=16, attr_name="value")
-        io_zeros = [0] * ports
-        return {
-            "traffic_rx": rx,
-            "traffic_tx": tx,
-            "sum_rx": rx,
-            "sum_tx": tx,
-            "crc_errors": crc,
-            "speed_io": io_zeros,
-        }
-
-    def parse_port_statistics_v2b(
-        self, page: Response | BaseResponse, ports: int
-    ) -> dict[str, Any]:
-        """Parse port statistics from the html page."""
-        tree = html.fromstring(page.content)
-        rx_turnover_elems = tree.xpath('//tr[@class="portID"]/input[1]')
-        rx_current_elems = tree.xpath('//tr[@class="portID"]/input[2]')
-        tx_turnover_elems = tree.xpath('//tr[@class="portID"]/input[3]')
-        tx_current_elems = tree.xpath('//tr[@class="portID"]/input[4]')
-        crc_turnover_elems = tree.xpath('//tr[@class="portID"]/input[5]')
-        crc_current_elems = tree.xpath('//tr[@class="portID"]/input[6]')
-
-        # calculate int bytes
-        rx = [turnover*4294967296+current for turnover,current in zip(convert_to_int(rx_turnover_elems, output_elems=ports, base=10, attr_name="value"), convert_to_int(rx_current_elems, output_elems=ports, base=10, attr_name="value"))]
-        tx = [turnover*4294967296+current for turnover,current in zip(convert_to_int(tx_turnover_elems, output_elems=ports, base=10, attr_name="value"), convert_to_int(tx_current_elems, output_elems=ports, base=10, attr_name="value"))]
-        crc = [turnover*4294967296+current for turnover,current in zip(convert_to_int(crc_turnover_elems, output_elems=ports, base=10, attr_name="value"), convert_to_int(crc_current_elems, output_elems=ports, base=10, attr_name="value"))]
         io_zeros = [0] * ports
         return {
             "traffic_rx": rx,
@@ -434,6 +383,86 @@ class GS105PE(PageParser):
             "switch_firmware": self._switch_firmware,
         }
 
+    def parse_port_status(
+        self, page: Response | BaseResponse, ports: int
+    ) -> dict[int, dict[str, Any]]:
+        """Parse port status from the html page."""
+        status_by_port = {}
+
+        tree = html.fromstring(page.content)
+        _port_elems = tree.xpath('//tr[@class="portID"]/td[3]')
+        portstatus_elems = tree.xpath('//tr[@class="portID"]/td[4]')
+        portspeed_elems = tree.xpath('//tr[@class="portID"]/td[5]')
+        portconnectionspeed_elems = tree.xpath('//tr[@class="portID"]/td[6]')
+
+        for port_nr in range(ports):
+            try:
+                status_text = portstatus_elems[port_nr].text.strip()
+                modus_speed_text = portspeed_elems[port_nr].text.strip()
+                connection_speed_text = portconnectionspeed_elems[
+                    port_nr
+                ].text.strip()
+            except (IndexError, AttributeError):
+                status_text = self.port_status.get(port_nr + 1, {}).get(
+                    "status", None
+                )
+                modus_speed_text = self.port_status.get(port_nr + 1, {}).get(
+                    "modus_speed", None
+                )
+                connection_speed_text = self.port_status.get(port_nr + 1, {}).get(
+                    "connection_speed", None
+                )
+            status_by_port[port_nr + 1] = {
+                "status": status_text,
+                "modus_speed": modus_speed_text,
+                "connection_speed": connection_speed_text,
+            }
+
+        self.port_status = status_by_port
+        _LOGGER.debug("Port Status is %s", self.port_status)
+        return status_by_port
+
+    def parse_port_statistics_v2(
+        self, page: Response | BaseResponse, ports: int
+    ) -> dict[str, Any]:
+        """Parse port statistics from the html page."""
+        tree = html.fromstring(page.content)
+        rx_turnover_elems = tree.xpath('//tr[@class="portID"]/input[1]')
+        rx_current_elems = tree.xpath('//tr[@class="portID"]/input[2]')
+        tx_turnover_elems = tree.xpath('//tr[@class="portID"]/input[3]')
+        tx_current_elems = tree.xpath('//tr[@class="portID"]/input[4]')
+        crc_turnover_elems = tree.xpath('//tr[@class="portID"]/input[5]')
+        crc_current_elems = tree.xpath('//tr[@class="portID"]/input[6]')
+
+        # calculate int bytes
+        int32_max = 2**32
+        rx = [
+            turnover * int32_max + current
+            for turnover, current in
+            zip(convert_to_int(rx_turnover_elems, output_elems=ports, base=10, attr_name="value"),
+                convert_to_int(rx_current_elems, output_elems=ports, base=10, attr_name="value"))
+        ]
+        tx = [
+            turnover*int32_max+current
+            for turnover, current in
+            zip(convert_to_int(tx_turnover_elems, output_elems=ports, base=10, attr_name="value"),
+                convert_to_int(tx_current_elems, output_elems=ports, base=10, attr_name="value"))
+        ]
+        crc = [
+            turnover * int32_max + current
+            for turnover, current in
+            zip(convert_to_int(crc_turnover_elems, output_elems=ports, base=10, attr_name="value"),
+                convert_to_int(crc_current_elems, output_elems=ports, base=10, attr_name="value"))
+        ]
+        io_zeros = [0] * ports
+        return {
+            "traffic_rx": rx,
+            "traffic_tx": tx,
+            "sum_rx": rx,
+            "sum_tx": tx,
+            "crc_errors": crc,
+            "speed_io": io_zeros,
+        }
 
 class GS105Ev3(PageParser):
     """Parser for the GS105Ev3 switch."""
