@@ -124,6 +124,12 @@ class GS105PE(AutodetectedSwitchModel):
         ("check_login_form_rand", [True]),
         ("parse_login_title_tag", ["GS105PE"]),
     ]
+    PORT_STATISTICS_TEMPLATES: ClassVar = [
+        {
+            "method": "get",
+            "url": "http://{ip}/portStatistics.cgi",
+        }
+    ]
     PORT_STATUS_TEMPLATES: ClassVar = [
         {
             "method": "get",
