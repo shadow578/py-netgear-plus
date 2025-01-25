@@ -110,7 +110,7 @@ class GS105E(AutodetectedSwitchModel):
 
 
 class GS105Ev2(AutodetectedSwitchModel):
-    """Definition for Netgear CG105Ev2 model."""
+    """Definition for Netgear GS105Ev2 model."""
 
     MODEL_NAME = "GS105Ev2"
     PORTS = 5
@@ -121,7 +121,7 @@ class GS105Ev2(AutodetectedSwitchModel):
 
 
 class GS105PE(AutodetectedSwitchModel):
-    """Definition for Netgear CG105PE model."""
+    """Definition for Netgear GS105PE model."""
 
     MODEL_NAME = "GS105PE"
     PORTS = 5
