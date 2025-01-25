@@ -136,6 +136,7 @@ class GS105PE(AutodetectedSwitchModel):
             "url": "http://{ip}/status.cgi",
         }
     ]
+    LOGOUT_TEMPLATES: ClassVar = [{"method": "get", "url": "http://{ip}/logout.cgi"}]
 
 
 class GS108E(AutodetectedSwitchModel):

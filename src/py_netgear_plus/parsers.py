@@ -93,6 +93,12 @@ def convert_gs3xx_to_int(input_1: str, input_2: str, base: int = 10) -> int:
     return int(input_1, base) * int32 + int(input_2, base)
 
 
+def convert_gs105_to_int(input_1: int, input_2: int) -> int:
+    """Calculate real value from int32 turnover counter and current value."""
+    int32 = 2**32
+    return input_1 * int32 + input_2
+
+
 class NetgearPlusPageParserError(Exception):
     """Base class for NetgearSwitchParser errors."""
 
@@ -128,8 +134,11 @@ class PageParser:
         return bool(self.parse_login_form_rand(page))
 
     def parse_login_title_tag(self, page: Response | BaseResponse) -> str | None:
-        """Return the title tag from the login page.
-           For new firmwares V2.06.10, V2.06.17, V2.06.24."""
+        """
+        Return the title tag from the login page.
+
+        For new firmwares V2.06.10, V2.06.17, V2.06.24.
+        """
         if page is not None and page.content:
             tree = html.fromstring(page.content)
             title_elems = tree.xpath("//title")
@@ -139,10 +148,13 @@ class PageParser:
         return None
 
     def parse_login_switchinfo_tag(self, page: Response | BaseResponse) -> str | None:
-        """Return the title tag from the login page.
-           For old firmware V2.00.05, return ""
-           or something like: "GS108Ev3 - 8-Port Gigabit ProSAFE Plus Switch".
-           Newer firmwares contains that too."""
+        """
+        Return the title tag from the login page.
+
+        For old firmware V2.00.05, return ""
+        or something like: "GS108Ev3 - 8-Port Gigabit ProSAFE Plus Switch".
+        Newer firmwares contains that too.
+        """
         if page is not None and page.content:
             tree = html.fromstring(page.content)
             switchinfo_elems = tree.xpath('//div[@class="switchInfo"]')
@@ -399,13 +411,9 @@ class GS105PE(PageParser):
             try:
                 status_text = portstatus_elems[port_nr].text.strip()
                 modus_speed_text = portspeed_elems[port_nr].text.strip()
-                connection_speed_text = portconnectionspeed_elems[
-                    port_nr
-                ].text.strip()
+                connection_speed_text = portconnectionspeed_elems[port_nr].text.strip()
             except (IndexError, AttributeError):
-                status_text = self.port_status.get(port_nr + 1, {}).get(
-                    "status", None
-                )
+                status_text = self.port_status.get(port_nr + 1, {}).get("status", None)
                 modus_speed_text = self.port_status.get(port_nr + 1, {}).get(
                     "modus_speed", None
                 )
@@ -435,24 +443,41 @@ class GS105PE(PageParser):
         crc_current_elems = tree.xpath('//tr[@class="portID"]/input[6]')
 
         # calculate int bytes
-        int32_max = 2**32
         rx = [
-            turnover * int32_max + current
-            for turnover, current in
-            zip(convert_to_int(rx_turnover_elems, output_elems=ports, base=10, attr_name="value"),
-                convert_to_int(rx_current_elems, output_elems=ports, base=10, attr_name="value"))
+            convert_gs105_to_int(turnover, current)
+            for turnover, current in zip(
+                convert_to_int(
+                    rx_turnover_elems, output_elems=ports, base=10, attr_name="value"
+                ),
+                convert_to_int(
+                    rx_current_elems, output_elems=ports, base=10, attr_name="value"
+                ),
+                strict=False,
+            )
         ]
         tx = [
-            turnover*int32_max+current
-            for turnover, current in
-            zip(convert_to_int(tx_turnover_elems, output_elems=ports, base=10, attr_name="value"),
-                convert_to_int(tx_current_elems, output_elems=ports, base=10, attr_name="value"))
+            convert_gs105_to_int(turnover, current)
+            for turnover, current in zip(
+                convert_to_int(
+                    tx_turnover_elems, output_elems=ports, base=10, attr_name="value"
+                ),
+                convert_to_int(
+                    tx_current_elems, output_elems=ports, base=10, attr_name="value"
+                ),
+                strict=False,
+            )
         ]
         crc = [
-            turnover * int32_max + current
-            for turnover, current in
-            zip(convert_to_int(crc_turnover_elems, output_elems=ports, base=10, attr_name="value"),
-                convert_to_int(crc_current_elems, output_elems=ports, base=10, attr_name="value"))
+            convert_gs105_to_int(turnover, current)
+            for turnover, current in zip(
+                convert_to_int(
+                    crc_turnover_elems, output_elems=ports, base=10, attr_name="value"
+                ),
+                convert_to_int(
+                    crc_current_elems, output_elems=ports, base=10, attr_name="value"
+                ),
+                strict=False,
+            )
         ]
         io_zeros = [0] * ports
         return {
@@ -463,6 +488,7 @@ class GS105PE(PageParser):
             "crc_errors": crc,
             "speed_io": io_zeros,
         }
+
 
 class GS105Ev3(PageParser):
     """Parser for the GS105Ev3 switch."""
