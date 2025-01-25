@@ -87,6 +87,10 @@ class AutodetectedSwitchModel:
         del poe_port
         return {}
 
+    def has_led_switch(self) -> bool:
+        """Return true when front panel LED can be switched."""
+        return bool(self.SWITCH_LED_TEMPLATES)
+
     def get_switch_led_data(self, state: str) -> dict:
         """Return empty dict. Implement on model level."""
         del state
