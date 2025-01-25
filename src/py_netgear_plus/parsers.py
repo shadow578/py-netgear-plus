@@ -16,6 +16,11 @@ API_V2_CHECKS = {
     "firmware": ["V2.06.24GR", "V2.06.24EN"],
 }
 
+API_V2B_CHECKS = {
+    "bootloader": ["V1.6.0.2-VB"],
+    "firmware": ["V1.6.0.17"],
+}
+
 POE_PORT_ENABLED_STATUS = ["enable", "aktiv"]
 
 
@@ -194,6 +199,18 @@ class PageParser:
         match_firmware = self._switch_firmware in API_V2_CHECKS["firmware"]
         return match_bootloader or match_firmware
 
+    def has_api_v2b(self) -> bool:
+        """Check if the switch has API v2."""
+        if not self._switch_firmware or not self._switch_bootloader:
+            error_message = (
+                "Firmware or bootloader version not set. "
+                "Call parse_switch_metadata first."
+            )
+            raise NetgearPlusPageParserError(error_message)
+        match_bootloader = self._switch_bootloader in API_V2B_CHECKS["bootloader"]
+        match_firmware = self._switch_firmware in API_V2B_CHECKS["firmware"]
+        return match_bootloader or match_firmware
+
     def parse_switch_metadata(self, page: Response | BaseResponse) -> dict[str, Any]:
         """Parse switch info from the html page."""
         tree = html.fromstring(page.content)
@@ -230,12 +247,18 @@ class PageParser:
         """Parse port status from the html page."""
         status_by_port = {}
 
-        if self.has_api_v2():
+        if self.has_api_v2() or self.has_api_v2b():
             tree = html.fromstring(page.content)
-            _port_elems = tree.xpath('//tr[@class="portID"]/td[2]')
-            portstatus_elems = tree.xpath('//tr[@class="portID"]/td[3]')
-            portspeed_elems = tree.xpath('//tr[@class="portID"]/td[4]')
-            portconnectionspeed_elems = tree.xpath('//tr[@class="portID"]/td[5]')
+            if get_text_from_next_element(tree, '//td[text()="Port"]') == "Port Description":
+                _port_elems = tree.xpath('//tr[@class="portID"]/td[3]')
+                portstatus_elems = tree.xpath('//tr[@class="portID"]/td[4]')
+                portspeed_elems = tree.xpath('//tr[@class="portID"]/td[5]')
+                portconnectionspeed_elems = tree.xpath('//tr[@class="portID"]/td[6]')
+            else:
+                _port_elems = tree.xpath('//tr[@class="portID"]/td[2]')
+                portstatus_elems = tree.xpath('//tr[@class="portID"]/td[3]')
+                portspeed_elems = tree.xpath('//tr[@class="portID"]/td[4]')
+                portconnectionspeed_elems = tree.xpath('//tr[@class="portID"]/td[5]')
 
             for port_nr in range(ports):
                 try:
@@ -270,6 +293,8 @@ class PageParser:
         """Parse port statistics from the html page."""
         if self.has_api_v2():
             return self.parse_port_statistics_v2(page, ports)
+        if self.has_api_v2b():
+            return self.parse_port_statistics_v2b(page, ports)
         return self.parse_port_statistics_v1(page, ports)
 
     def parse_port_statistics_v1(
@@ -318,6 +343,32 @@ class PageParser:
             "speed_io": io_zeros,
         }
 
+    def parse_port_statistics_v2b(
+        self, page: Response | BaseResponse, ports: int
+    ) -> dict[str, Any]:
+        """Parse port statistics from the html page."""
+        tree = html.fromstring(page.content)
+        rx_turnover_elems = tree.xpath('//tr[@class="portID"]/input[1]')
+        rx_current_elems = tree.xpath('//tr[@class="portID"]/input[2]')
+        tx_turnover_elems = tree.xpath('//tr[@class="portID"]/input[3]')
+        tx_current_elems = tree.xpath('//tr[@class="portID"]/input[4]')
+        crc_turnover_elems = tree.xpath('//tr[@class="portID"]/input[5]')
+        crc_current_elems = tree.xpath('//tr[@class="portID"]/input[6]')
+
+        # calculate int bytes
+        rx = [turnover*4294967296+current for turnover,current in zip(convert_to_int(rx_turnover_elems, output_elems=ports, base=10, attr_name="value"), convert_to_int(rx_current_elems, output_elems=ports, base=10, attr_name="value"))]
+        tx = [turnover*4294967296+current for turnover,current in zip(convert_to_int(tx_turnover_elems, output_elems=ports, base=10, attr_name="value"), convert_to_int(tx_current_elems, output_elems=ports, base=10, attr_name="value"))]
+        crc = [turnover*4294967296+current for turnover,current in zip(convert_to_int(crc_turnover_elems, output_elems=ports, base=10, attr_name="value"), convert_to_int(crc_current_elems, output_elems=ports, base=10, attr_name="value"))]
+        io_zeros = [0] * ports
+        return {
+            "traffic_rx": rx,
+            "traffic_tx": tx,
+            "sum_rx": rx,
+            "sum_tx": tx,
+            "crc_errors": crc,
+            "speed_io": io_zeros,
+        }
+
     def parse_poe_port_config(self, page: Response | BaseResponse) -> dict[str, Any]:
         """Parse PoE port configuration from the html page."""
         raise NotImplementedError
@@ -349,6 +400,39 @@ class GS105Ev2(PageParser):
     def __init__(self) -> None:
         """Initialize the GS105Ev2 parser."""
         super().__init__()
+
+
+class GS105PE(PageParser):
+    """Parser for the GS105PE switch."""
+
+    def __init__(self) -> None:
+        """Initialize the GS105PE parser."""
+        super().__init__()
+
+    def parse_switch_metadata(self, page: Response | BaseResponse) -> dict[str, Any]:
+        """Parse switch info from the html page."""
+        tree = html.fromstring(page.content)
+
+        switch_name = get_first_value(tree, '//input[@id="switch_name"]')
+        switch_serial_number = get_text_from_next_element(
+            tree, '//td[contains(text(),"Serial Number")]'
+        )
+
+        # Detect Firmware
+        self._switch_firmware = get_text_from_next_element(
+            tree, '//td[contains(text(),"Firmware Version")]'
+        )
+
+        self._switch_bootloader = get_text_from_next_element(
+            tree, '//td[contains(text(),"Bootloader Version")]'
+        )
+
+        return {
+            "switch_name": switch_name,
+            "switch_serial_number": switch_serial_number,
+            "switch_bootloader": self._switch_bootloader,
+            "switch_firmware": self._switch_firmware,
+        }
 
 
 class GS105Ev3(PageParser):
@@ -823,6 +907,7 @@ class JGS524Ev2(PageParser):
 PARSERS = {
     "GS105E": GS105E,
     "GS105Ev2": GS105Ev2,
+    "GS105PE": GS105PE,
     "GS105Ev3": GS105Ev3,
     "GS108E": GS108E,
     "GS108Ev3": GS108Ev3,
