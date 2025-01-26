@@ -198,6 +198,52 @@ class GS108EPv3(AutodetectedSwitchModel):
     ALLOWED_COOKIE_TYPES: ClassVar = ["GS108SID", "SID"]
 
 
+class GS110EMX(AutodetectedSwitchModel):
+    """Definition for Netgear GW108Ev3 model."""
+
+    SUPPORTED = False
+    MODEL_NAME = "GS110EMX"
+    PORTS = 10
+    CHECKS_AND_RESULTS: ClassVar = [
+        ("check_login_form_rand", [True]),
+        ("parse_login_title_tag", ["GS110EMX"]),
+    ]
+    LOGIN_TEMPLATE: ClassVar = {
+        "method": "post",
+        "url": "http://{ip}/homepage.html",
+        "params": {"LoginPassword": "_password_hash"},
+    }
+    ALLOWED_COOKIE_TYPES: ClassVar = ["gambitCookie"]
+    SWITCH_INFO_TEMPLATES: ClassVar = [
+        {
+            "method": "get",
+            "url": "http://{ip}/iss/specific/sysInfo.html",
+            "params": {"Gambit": "_gambit"},
+        }
+    ]
+    PORT_STATUS_TEMPLATES: ClassVar = [
+        {
+            "method": "get",
+            "url": "http://{ip}/iss/specific/port_settings.html",
+            "params": {"Gambit": "_gambit"},
+        }
+    ]
+    PORT_STATISTICS_TEMPLATES: ClassVar = [
+        {
+            "method": "get",
+            "url": "http://{ip}/iss/specific/interface_stats.html",
+            "params": {"Gambit": "_gambit"},
+        }
+    ]
+    LOGOUT_TEMPLATES: ClassVar = [
+        {
+            "method": "get",
+            "url": "http://{ip}/iss/specific/logout.html",
+            "params": {"Gambit": "_gambit"},
+        }
+    ]
+
+
 class GS30xSeries(AutodetectedSwitchModel):
     """Parent class definition for Netgear GS3xx series."""
 
@@ -460,7 +506,6 @@ class GS316EPP(GS316EP):
 class JGS524Ev2(AutodetectedSwitchModel):
     """Definition for Netgear JGS524Ev2 model."""
 
-    SUPPORTED = False
     MODEL_NAME = "JGS524Ev2"
     PORTS = 24
     CHECKS_AND_RESULTS: ClassVar = [
@@ -504,6 +549,7 @@ MODELS = [
     GS108E,
     GS108Ev3,
     GS108EPv3,
+    GS110EMX,
     GS305EP,
     GS305EPP,
     GS308EP,
