@@ -14,6 +14,7 @@ from py_netgear_plus import (
 )
 from py_netgear_plus.fetcher import URL_REQUEST_TIMEOUT, BaseResponse
 from py_netgear_plus.models import (
+    GS105PE,
     GS308EP,
     GS308EPP,
     GS316EPP,
@@ -25,6 +26,7 @@ from py_netgear_plus.netgear_crypt import hex_hmac_md5, merge_hash
 
 # List of models with saved pages, extracted rand values and crypted passwords
 FULLY_TESTED_MODELS = [
+    (GS105PE, "1578591883", "99915f464feee3be4193edd6dcc6b9b3", "<html></html>"),
     (GS108Ev3, "1763184457", "c2c905d5d99f592106a378bf709b737a", "<html></html>"),
     (GS308EP, "990464497", "43001294a37a3f2e1f919b64072a1a32", "<html></html>"),
     (GS308EPP, "1425622205", "e65ad5ee60718843afafeaa03bd1ec49", "<html></html>"),
@@ -42,6 +44,7 @@ FULLY_TESTED_MODELS = [
     ),
 ]
 PARTIALLY_TESTED_MODELS = [
+    GS105PE,
     GS108Ev3,
     GS308EP,
     GS308EPP,

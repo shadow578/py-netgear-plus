@@ -134,11 +134,8 @@ class PageParser:
         return bool(self.parse_login_form_rand(page))
 
     def parse_login_title_tag(self, page: Response | BaseResponse) -> str | None:
-        """
-        Return the title tag from the login page.
-
-        For new firmwares V2.06.10, V2.06.17, V2.06.24.
-        """
+        """Return the title tag from the login page."""
+        """For new firmwares V2.06.10, V2.06.17, V2.06.24."""
         if page is not None and page.content:
             tree = html.fromstring(page.content)
             title_elems = tree.xpath("//title")
@@ -148,12 +145,11 @@ class PageParser:
         return None
 
     def parse_login_switchinfo_tag(self, page: Response | BaseResponse) -> str | None:
+        """Return the title tag from the login page."""
         """
-        Return the title tag from the login page.
-
         For old firmware V2.00.05, return ""
         or something like: "GS108Ev3 - 8-Port Gigabit ProSAFE Plus Switch".
-        Newer firmwares contains that too.
+        Newer firmwares contain that too.
         """
         if page is not None and page.content:
             tree = html.fromstring(page.content)
@@ -464,7 +460,7 @@ class GS105PE(PageParser):
                 convert_to_int(
                     tx_current_elems, output_elems=ports, base=10, attr_name="value"
                 ),
-                strict=False,
+                strict=True,
             )
         ]
         crc = [
@@ -476,7 +472,7 @@ class GS105PE(PageParser):
                 convert_to_int(
                     crc_current_elems, output_elems=ports, base=10, attr_name="value"
                 ),
-                strict=False,
+                strict=True,
             )
         ]
         io_zeros = [0] * ports
