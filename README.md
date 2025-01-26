@@ -41,6 +41,7 @@ some basic configuration updates.
 | Model    | Ports | Firmware versions                      | Bootloader versions |
 | -------- | ----- | -------------------------------------- | ------------------- |
 | GS105E   | 5     | ?                                      |                     |
+| GS105PE  | 5     | V1.6.0.17                              | V1.6.0.2-VB         |
 | GS108E   | 8     | V1.00.11                               | V1.00.03            |
 | GS105Ev3 | 5     | ?                                      |                     |
 | GS108Ev3 | 8     | V2.00.05, V2.06.10, V2.06.17, V2.06.24 | V2.06.01 - V2.06.03 |

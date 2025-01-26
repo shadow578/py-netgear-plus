@@ -109,7 +109,7 @@ class GS105E(AutodetectedSwitchModel):
 
 
 class GS105Ev2(AutodetectedSwitchModel):
-    """Definition for Netgear CG105Ev2 model."""
+    """Definition for Netgear GS105Ev2 model."""
 
     MODEL_NAME = "GS105Ev2"
     PORTS = 5
@@ -117,6 +117,30 @@ class GS105Ev2(AutodetectedSwitchModel):
         ("check_login_form_rand", [True]),
         ("parse_login_title_tag", ["GS105Ev2"]),
     ]
+
+
+class GS105PE(AutodetectedSwitchModel):
+    """Definition for Netgear GS105PE model."""
+
+    MODEL_NAME = "GS105PE"
+    PORTS = 5
+    CHECKS_AND_RESULTS: ClassVar = [
+        ("check_login_form_rand", [True]),
+        ("parse_login_title_tag", ["GS105PE"]),
+    ]
+    PORT_STATISTICS_TEMPLATES: ClassVar = [
+        {
+            "method": "get",
+            "url": "http://{ip}/portStatistics.cgi",
+        }
+    ]
+    PORT_STATUS_TEMPLATES: ClassVar = [
+        {
+            "method": "get",
+            "url": "http://{ip}/status.cgi",
+        }
+    ]
+    LOGOUT_TEMPLATES: ClassVar = [{"method": "get", "url": "http://{ip}/logout.cgi"}]
 
 
 class GS108E(AutodetectedSwitchModel):
@@ -476,6 +500,7 @@ class JGS524Ev2(AutodetectedSwitchModel):
 MODELS = [
     GS105E,
     GS105Ev2,
+    GS105PE,
     GS108E,
     GS108Ev3,
     GS108EPv3,
