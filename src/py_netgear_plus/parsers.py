@@ -12,8 +12,8 @@ from .fetcher import BaseResponse
 _LOGGER = logging.getLogger(__name__)
 
 API_V2_CHECKS = {
-    "bootloader": ["V1.00.03", "V2.06.01", "V2.06.02", "V2.06.03"],
-    "firmware": ["V2.06.24GR", "V2.06.24EN"],
+    "bootloader": ["V1.00.03", "V2.06.01", "V2.06.02", "V2.06.03", "V1.6.0.2-VB"],
+    "firmware": ["V2.06.24GR", "V2.06.24EN", "V1.6.0.17"],
 }
 
 POE_PORT_ENABLED_STATUS = ["enable", "aktiv"]
@@ -98,6 +98,12 @@ def convert_gs3xx_to_int(input_1: str, input_2: str, base: int = 10) -> int:
     return int(input_1, base) * int32 + int(input_2, base)
 
 
+def convert_gs105_to_int(input_1: int, input_2: int) -> int:
+    """Calculate real value from int32 turnover counter and current value."""
+    int32 = 2**32
+    return input_1 * int32 + input_2
+
+
 class NetgearPlusPageParserError(Exception):
     """Base class for NetgearSwitchParser errors."""
 
@@ -145,9 +151,11 @@ class PageParser:
 
     def parse_login_switchinfo_tag(self, page: Response | BaseResponse) -> str | None:
         """Return the title tag from the login page."""
-        """For old firmware V2.00.05, return """ ""
-        """or something like: "GS108Ev3 - 8-Port Gigabit ProSAFE Plus Switch"."""
-        """Newer firmwares contains that too."""
+        """
+        For old firmware V2.00.05, return ""
+        or something like: "GS108Ev3 - 8-Port Gigabit ProSAFE Plus Switch".
+        Newer firmwares contain that too.
+        """
         if page is not None and page.content:
             tree = html.fromstring(page.content)
             switchinfo_elems = tree.xpath('//div[@class="switchInfo"]')
@@ -354,6 +362,133 @@ class GS105Ev2(PageParser):
     def __init__(self) -> None:
         """Initialize the GS105Ev2 parser."""
         super().__init__()
+
+
+class GS105PE(PageParser):
+    """Parser for the GS105PE switch."""
+
+    def __init__(self) -> None:
+        """Initialize the GS105PE parser."""
+        super().__init__()
+
+    def parse_switch_metadata(self, page: Response | BaseResponse) -> dict[str, Any]:
+        """Parse switch info from the html page."""
+        tree = html.fromstring(page.content)
+
+        switch_name = get_first_value(tree, '//input[@id="switch_name"]')
+        switch_serial_number = get_text_from_next_element(
+            tree, '//td[contains(text(),"Serial Number")]'
+        )
+
+        # Detect Firmware
+        self._switch_firmware = get_text_from_next_element(
+            tree, '//td[contains(text(),"Firmware Version")]'
+        )
+
+        self._switch_bootloader = get_text_from_next_element(
+            tree, '//td[contains(text(),"Bootloader Version")]'
+        )
+
+        return {
+            "switch_name": switch_name,
+            "switch_serial_number": switch_serial_number,
+            "switch_bootloader": self._switch_bootloader,
+            "switch_firmware": self._switch_firmware,
+        }
+
+    def parse_port_status(
+        self, page: Response | BaseResponse, ports: int
+    ) -> dict[int, dict[str, Any]]:
+        """Parse port status from the html page."""
+        status_by_port = {}
+
+        tree = html.fromstring(page.content)
+        _port_elems = tree.xpath('//tr[@class="portID"]/td[3]')
+        portstatus_elems = tree.xpath('//tr[@class="portID"]/td[4]')
+        portspeed_elems = tree.xpath('//tr[@class="portID"]/td[5]')
+        portconnectionspeed_elems = tree.xpath('//tr[@class="portID"]/td[6]')
+
+        for port_nr in range(ports):
+            try:
+                status_text = portstatus_elems[port_nr].text.strip()
+                modus_speed_text = portspeed_elems[port_nr].text.strip()
+                connection_speed_text = portconnectionspeed_elems[port_nr].text.strip()
+            except (IndexError, AttributeError):
+                status_text = self.port_status.get(port_nr + 1, {}).get("status", None)
+                modus_speed_text = self.port_status.get(port_nr + 1, {}).get(
+                    "modus_speed", None
+                )
+                connection_speed_text = self.port_status.get(port_nr + 1, {}).get(
+                    "connection_speed", None
+                )
+            status_by_port[port_nr + 1] = {
+                "status": status_text,
+                "modus_speed": modus_speed_text,
+                "connection_speed": connection_speed_text,
+            }
+
+        self.port_status = status_by_port
+        _LOGGER.debug("Port Status is %s", self.port_status)
+        return status_by_port
+
+    def parse_port_statistics_v2(
+        self, page: Response | BaseResponse, ports: int
+    ) -> dict[str, Any]:
+        """Parse port statistics from the html page."""
+        tree = html.fromstring(page.content)
+        rx_turnover_elems = tree.xpath('//tr[@class="portID"]/input[1]')
+        rx_current_elems = tree.xpath('//tr[@class="portID"]/input[2]')
+        tx_turnover_elems = tree.xpath('//tr[@class="portID"]/input[3]')
+        tx_current_elems = tree.xpath('//tr[@class="portID"]/input[4]')
+        crc_turnover_elems = tree.xpath('//tr[@class="portID"]/input[5]')
+        crc_current_elems = tree.xpath('//tr[@class="portID"]/input[6]')
+
+        # calculate int bytes
+        rx = [
+            convert_gs105_to_int(turnover, current)
+            for turnover, current in zip(
+                convert_to_int(
+                    rx_turnover_elems, output_elems=ports, base=10, attr_name="value"
+                ),
+                convert_to_int(
+                    rx_current_elems, output_elems=ports, base=10, attr_name="value"
+                ),
+                strict=False,
+            )
+        ]
+        tx = [
+            convert_gs105_to_int(turnover, current)
+            for turnover, current in zip(
+                convert_to_int(
+                    tx_turnover_elems, output_elems=ports, base=10, attr_name="value"
+                ),
+                convert_to_int(
+                    tx_current_elems, output_elems=ports, base=10, attr_name="value"
+                ),
+                strict=True,
+            )
+        ]
+        crc = [
+            convert_gs105_to_int(turnover, current)
+            for turnover, current in zip(
+                convert_to_int(
+                    crc_turnover_elems, output_elems=ports, base=10, attr_name="value"
+                ),
+                convert_to_int(
+                    crc_current_elems, output_elems=ports, base=10, attr_name="value"
+                ),
+                strict=True,
+            )
+        ]
+        io_zeros = [0] * ports
+        return {
+            "traffic_rx": rx,
+            "traffic_tx": tx,
+            "sum_rx": rx,
+            "sum_tx": tx,
+            "crc_errors": crc,
+            "speed_io": io_zeros,
+        }
 
 
 class GS105Ev3(PageParser):
@@ -843,6 +978,7 @@ class JGS524Ev2(PageParser):
 PARSERS = {
     "GS105E": GS105E,
     "GS105Ev2": GS105Ev2,
+    "GS105PE": GS105PE,
     "GS105Ev3": GS105Ev3,
     "GS108E": GS108E,
     "GS108Ev3": GS108Ev3,
