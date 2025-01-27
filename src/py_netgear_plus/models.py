@@ -480,19 +480,19 @@ class JGS524Ev2(AutodetectedSwitchModel):
     SWITCH_INFO_TEMPLATES: ClassVar = [
         {
             "method": "get",
-            "url": "http://{ip}/status_switch_info.htm",
+            "url": "http://{ip}/config/status_switch_info.htm",
         },
     ]
     PORT_STATUS_TEMPLATES: ClassVar = [
         {
             "method": "get",
-            "url": "http://{ip}/status_status.htm",
+            "url": "http://{ip}/config/status_status.htm",
         },
     ]
     PORT_STATISTICS_TEMPLATES: ClassVar = [
         {
             "method": "get",
-            "url": "http://{ip}/monitoring_port_statistics.htm",
+            "url": "http://{ip}/config/monitoring_port_statistics.htm",
         }
     ]
 
