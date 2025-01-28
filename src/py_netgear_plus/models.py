@@ -374,7 +374,13 @@ class GS316EP(GS30xSeries):
             "params": {"Gambit": "_gambit"},
         }
     ]
-    SWITCH_LED_TEMPLATES: ClassVar = []
+    SWITCH_LED_TEMPLATES: ClassVar = [
+        {
+            "method": "post",
+            "url": "http://{ip}/iss/specific/leds.html",
+            "params": {"Gambit": "_gambit"},
+        }
+    ]
     PORT_STATUS_TEMPLATES: ClassVar = SWITCH_INFO_TEMPLATES
     PORT_STATISTICS_TEMPLATES: ClassVar = [
         {
@@ -443,6 +449,12 @@ class GS316EP(GS30xSeries):
         return {
             "TYPE": "resetPoe",
             "PoePort": "".join(poeport_string),
+        }
+
+    def get_switch_led_data(self, state: str) -> dict:
+        """Return empty dict. Implement on model level."""
+        return {
+            "PORT_LED_STATUS": 1 if state == "on" else 0,
         }
 
 
