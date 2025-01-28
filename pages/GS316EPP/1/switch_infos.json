@@ -4,6 +4,7 @@
   "switch_serial_number": "6LA6375EA0249",
   "switch_bootloader": "unknown",
   "switch_firmware": "1.0.4.4",
+  "led_status": "on",
   "port_1_status": "on",
   "port_1_modus_speed": true,
   "port_1_connection_speed": 100,
