@@ -1,0 +1,136 @@
+# How to Add Additional Switch Models to py-netgear-plus
+
+This guide provides step-by-step instructions on how to add support for additional Netgear Plus switch models to the **py-netgear-plus** Python library. The process involves defining a new switch model class, implementing the necessary attributes and methods, and registering the model in the library.
+
+To add a new switch model, you need to update two files:
+
+- **models.py**: This file defines various Netgear Plus switch models. Each model is implemented as a class inheriting from `AutodetectedSwitchModel`, with attributes specifying model-specific details.
+- **parsers.py**: This file contains parsing functions used to extract and interpret data from switch responses. If a new model requires unique parsing logic, it should be added here.
+
+---
+
+## 1. Create a New Class for the Switch Model
+
+Each switch model should inherit from `AutodetectedSwitchModel` or from the most similar existing model. Inheriting from a similar model reduces duplication and ensures compatibility with the library's structure.
+
+You can create a new switch model class by following the structure below:
+
+```python
+from typing import ClassVar
+
+class GSXYZ(AutodetectedSwitchModel):  # Replace GSXYZ with the actual model name
+    """Definition for Netgear GSXYZ model."""
+
+    MODEL_NAME = "GSXYZ"  # Set the actual model name
+    PORTS = 8  # Define the number of ports on the switch
+    POE_PORTS: ClassVar = [1, 2, 3, 4]  # Define PoE ports (if applicable)
+    POE_MAX_POWER_ALL_PORTS = 60  # Define maximum PoE power (if applicable)
+    ALLOWED_COOKIE_TYPES: ClassVar = ["SID"]  # Define allowed cookie types
+
+    CHECKS_AND_RESULTS: ClassVar = [
+        ("check_login_form_rand", [True]),  # Detection methods
+        ("parse_login_title_tag", ["GSXYZ"]),
+    ]
+
+    # Mandatory request templates for interacting with the switch
+    LOGIN_TEMPLATE: ClassVar = {
+        "method": "post",
+        "url": "http://{ip}/login.cgi",
+        "params": {"password": "_password_hash"},
+    }
+
+    SWITCH_INFO_TEMPLATES: ClassVar = [
+        {"method": "get", "url": "http://{ip}/switch_info.cgi"},
+    ]
+
+    PORT_STATUS_TEMPLATES: ClassVar = [
+        {"method": "get", "url": "http://{ip}/status.cgi"},
+    ]
+
+    PORT_STATISTICS_TEMPLATES: ClassVar = [
+        {"method": "get", "url": "http://{ip}/portStatistics.cgi"},
+    ]
+
+    LOGOUT_TEMPLATES: ClassVar = [
+        {"method": "get", "url": "http://{ip}/logout.cgi"},
+    ]
+```
+
+The `LOGIN_TEMPLATE`, `SWITCH_INFO_TEMPLATES`, `PORT_STATUS_TEMPLATES`, and `PORT_STATISTICS_TEMPLATES` are mandatory to implement for proper communication with the switch.
+
+Modify the class attributes according to the specific switch model.
+
+---
+
+## 2. Implement Any Additional Model-Specific Methods
+
+If the switch model supports additional functionality (such as PoE settings, LED control, etc.), implement the corresponding methods. For example:
+
+```python
+    def get_switch_poe_port_data(self, poe_port: int, state: str) -> dict:
+        """Returns data for enabling/disabling a PoE port."""
+        return {
+            "ACTION": "Apply",
+            "portID": poe_port - 1,
+            "ADMIN_MODE": 1 if state == "on" else 0,
+            "PORT_PRIO": 0,
+        }
+```
+
+Refer to existing switch models in `models.py` for additional examples.
+
+## 3. Register the Model in the `MODELS` List
+
+At the bottom of `models.py`, find the `MODELS` list and add the new model class:
+
+```python
+MODELS = [
+    GS105E,
+    GS105Ev2,
+    GS105PE,
+    GS108E,
+    GSXYZ,  # Add the newly created model here
+]
+```
+
+This ensures the new model is available for auto-detection.
+
+## 4. Create a Parser Class and Register It in `parsers.py`
+
+Each switch model has its own parser class. If the new model introduces unique parsing logic, create a new parser class in `parsers.py`. Ensure that this parser class inherits from the most similar existing parser class to maintain consistency.
+
+After defining the parser class, add it to the `PARSERS` list at the end of `parsers.py`:
+
+```python
+PARSERS = {
+    "GS105E": GS105E,
+    "GS105Ev2": GS105Ev2,
+    "GS105PE": GS105PE,
+    "GS108E": GS108E,
+    "GSXYZ": GSXYZ,  # Add the newly created parser class here
+}
+```
+
+This ensures that the model can be correctly parsed during auto-detection.
+
+## 5. Test the New Model and Update Unit Tests
+
+1. Connect the switch to your network.
+2. Run the auto-detection feature to verify if the switch is correctly identified.
+3. Ensure that all required API endpoints work correctly.
+4. If PoE or LED controls are implemented, test them thoroughly.
+5. Add unit tests for the new model in the test suite:
+   - Locate the unit test file in `tests/test__init__.py` that contains tests for existing switch models.
+   - Add the new model to the `FULLY_TESTED_MODELS` list with appropriate test values (rand, crypted password, and response content).
+   - Ensure the model is included in the `TEST_MODELS` list to be covered by parametrized tests.
+   - If the model lacks complete test data, add it to `PARTIALLY_TESTED_MODELS` with an appropriate `pytest.mark.xfail` annotation.
+   - Run the test suite with `pytest` to confirm all tests pass, and fix any issues as needed.
+
+## 6. Submit a Pull Request
+
+Please share the new model code by creating a pull request in the `py-netgear-plus` repository:
+
+1. Fork the repository.
+2. Commit your changes with a descriptive message.
+3. Push the changes to your forked repository.
+4. Submit a pull request with details about the new model.
