@@ -420,7 +420,13 @@ class GS316EP(GS30xSeries):
             "params": {"Gambit": "_gambit"},
         }
     ]
-    SWITCH_LED_TEMPLATES: ClassVar = []
+    SWITCH_LED_TEMPLATES: ClassVar = [
+        {
+            "method": "post",
+            "url": "http://{ip}/iss/specific/leds.html",
+            "params": {"Gambit": "_gambit"},
+        }
+    ]
     PORT_STATUS_TEMPLATES: ClassVar = SWITCH_INFO_TEMPLATES
     PORT_STATISTICS_TEMPLATES: ClassVar = [
         {
@@ -491,6 +497,12 @@ class GS316EP(GS30xSeries):
             "PoePort": "".join(poeport_string),
         }
 
+    def get_switch_led_data(self, state: str) -> dict:
+        """Return empty dict. Implement on model level."""
+        return {
+            "PORT_LED_STATUS": 1 if state == "on" else 0,
+        }
+
 
 class GS316EPP(GS316EP):
     """Definition for Netgear GS316EPP model."""
@@ -525,19 +537,19 @@ class JGS524Ev2(AutodetectedSwitchModel):
     SWITCH_INFO_TEMPLATES: ClassVar = [
         {
             "method": "get",
-            "url": "http://{ip}/status_switch_info.htm",
+            "url": "http://{ip}/config/status_switch_info.htm",
         },
     ]
     PORT_STATUS_TEMPLATES: ClassVar = [
         {
             "method": "get",
-            "url": "http://{ip}/status_status.htm",
+            "url": "http://{ip}/config/status_status.htm",
         },
     ]
     PORT_STATISTICS_TEMPLATES: ClassVar = [
         {
             "method": "get",
-            "url": "http://{ip}/monitoring_port_statistics.htm",
+            "url": "http://{ip}/config/monitoring_port_statistics.htm",
         }
     ]
 

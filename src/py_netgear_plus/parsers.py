@@ -733,6 +733,14 @@ class GS31xSeries(PageParser):
         del page
         return None
 
+    def parse_led_status(self, page: Response | BaseResponse) -> dict[str, Any]:
+        """Parse status of the front panel LEDs from the html page."""
+        tree = html.fromstring(page.content)
+        xpath = tree.xpath('//input[@id="ledStatus"]')
+        if xpath:
+            led_status = xpath[0].checked
+        return {"led_status": "on" if led_status else "off"}
+
     def parse_port_status(
         self, page: Response | BaseResponse, ports: int
     ) -> dict[int, dict[str, Any]]:

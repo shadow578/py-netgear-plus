@@ -1,0 +1,27 @@
+on:
+  push:
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+rc[0-9]+" # Push events to matching v*rc*, i.e. v20.15.10rc5
+      - "v[0-9]+.[0-9]+.[0-9]+pre[0-9]+" # Push events to matching v*pre*, i.e. v20.15.10pre5
+
+name: Create Pre Release
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Release pushed tag
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref_name }}
+        run: |
+          gh release create "$tag" \
+              --repo="$GITHUB_REPOSITORY" \
+              --title="${GITHUB_REPOSITORY#*/} ${tag#v}" \
+              --prerelease \
+              --generate-notes
