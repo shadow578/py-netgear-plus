@@ -15,6 +15,7 @@ from py_netgear_plus import (
 from py_netgear_plus.fetcher import URL_REQUEST_TIMEOUT, BaseResponse
 from py_netgear_plus.models import (
     GS105PE,
+    GS110EMX,
     GS308EP,
     GS308EPP,
     GS316EPP,
@@ -28,13 +29,19 @@ from py_netgear_plus.netgear_crypt import hex_hmac_md5, merge_hash
 FULLY_TESTED_MODELS = [
     (GS105PE, "1578591883", "99915f464feee3be4193edd6dcc6b9b3", "<html></html>"),
     (GS108Ev3, "1763184457", "c2c905d5d99f592106a378bf709b737a", "<html></html>"),
+    (
+        GS110EMX,
+        "2055460636",
+        "3e51baecfd84e4c0010662d6d92a1253",
+        '<html><input name="Gambit" value="cookie_value"></html>',
+    ),
     (GS308EP, "990464497", "43001294a37a3f2e1f919b64072a1a32", "<html></html>"),
     (GS308EPP, "1425622205", "e65ad5ee60718843afafeaa03bd1ec49", "<html></html>"),
     (
         GS316EPP,
         "1127757600",
         "3c630eb52109743e94ef671e137b3de0",
-        '<html><input name="Gambit" value="cookie_value"</html>',
+        '<html><input name="Gambit" value="cookie_value"></html>',
     ),
     (
         JGS524Ev2,
@@ -46,6 +53,7 @@ FULLY_TESTED_MODELS = [
 PARTIALLY_TESTED_MODELS = [
     GS105PE,
     GS108Ev3,
+    GS110EMX,
     GS308EP,
     GS308EPP,
     GS316EPP,
@@ -171,7 +179,7 @@ def test_check_login_url(switch_model: type[AutodetectedSwitchModel]) -> None:
     FULLY_TESTED_MODELS,
 )
 def test_parse_login_form_rand(
-    switch_model: AutodetectedSwitchModel,
+    switch_model: type[AutodetectedSwitchModel],
     rand: str,
     crypted_password: str,
     content: str,  # noqa: ARG001
@@ -180,9 +188,11 @@ def test_parse_login_form_rand(
     password = "Password1"
     connector = NetgearSwitchConnector(host="192.168.0.1", password=password)
     connector._page_fetcher._login_page_response = Mock()
-    page_name = switch_model.LOGIN_TEMPLATE["url"].split("/")[-1] or DEFAULT_PAGE
-    with Path(f"pages/{switch_model.MODEL_NAME}/0/{page_name}").open() as file:
+
+    page_fetcher = PyTestPageFetcher(switch_model)
+    with page_fetcher.get_path(switch_model.AUTODETECT_TEMPLATES).open() as file:
         connector._page_fetcher._login_page_response.content = file.read()
+
     connector._page_fetcher._login_page_response.status_code = requests.codes.ok
     assert (
         connector._page_parser.parse_login_form_rand(

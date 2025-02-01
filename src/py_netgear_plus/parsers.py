@@ -523,6 +523,116 @@ class GS108EPv3(PageParser):
         super().__init__()
 
 
+class GS110EMX(PageParser):
+    """Parser for the GS110EMX switch."""
+
+    def __init__(self) -> None:
+        """Initialize the GS110EMX parser."""
+        super().__init__()
+
+    def parse_switch_metadata(self, page: Response | BaseResponse) -> dict[str, Any]:
+        """Parse switch info from the html page."""
+        tree = html.fromstring(page.content)
+
+        switch_name = get_first_value(tree, '//input[@name="switch_name"]')
+        switch_serial_number = get_text_from_next_element(
+            tree, '//td[contains(text(),"Serial Number")]'
+        )
+        self._switch_bootloader = "unknown"
+        self._switch_firmware = get_text_from_next_element(
+            tree, '//td[contains(text(),"Firmware Version")]'
+        )
+
+        return {
+            "switch_name": switch_name,
+            "switch_serial_number": switch_serial_number,
+            "switch_bootloader": self._switch_bootloader,
+            "switch_firmware": self._switch_firmware,
+        }
+
+    def parse_client_hash(self, page: Response | BaseResponse) -> str | None:
+        """Return None as these switches do not have a hash value."""
+        del page
+        return None
+
+    def parse_port_status(
+        self, page: Response | BaseResponse, ports: int
+    ) -> dict[int, dict[str, Any]]:
+        """Parse port status from the html page."""
+        tree = html.fromstring(page.content)
+
+        xtree_port_statusses = tree.xpath('//tr[@class="portID"]')
+
+        if len(xtree_port_statusses) != ports:
+            message = f"Port count mismatch: {len(xtree_port_statusses)} != {ports}"
+            raise NetgearPlusPageParserError(message)
+
+        status_by_port = {}
+        for element in xtree_port_statusses:
+            try:
+                port_nr = element.xpath('./td/input[@name="PORT_NO"]')[0].value
+                port_nr = int(port_nr)
+            except IndexError as error:
+                message = "parse_port_status: Port number not found."
+                raise NetgearPlusPageParserError(message) from error
+            except ValueError as error:
+                message = f"parse_port_status: Port number ({port_nr}) not an integer."
+                raise NetgearPlusPageParserError(message) from error
+
+            xtree_port_attributes = element.xpath("./td")
+            port_state_text = xtree_port_attributes[3].text.strip()
+            modus_speed_text = xtree_port_attributes[4].text.strip()
+            connection_speed_text = xtree_port_attributes[5].text.strip()
+
+            status_by_port[port_nr] = {
+                "status": port_state_text,
+                "modus_speed": modus_speed_text,
+                "connection_speed": connection_speed_text,
+            }
+
+        self.port_status = status_by_port
+        _LOGGER.debug("Port Status is %s", self.port_status)
+        return status_by_port
+
+    def parse_port_statistics(
+        self, page: Response | BaseResponse, ports: int
+    ) -> dict[str, Any]:
+        """Parse port statistics from the html page."""
+        tree = html.fromstring(page.content)
+        rx = []
+        tx = []
+        crc = []
+
+        page_inputs = tree.xpath('//table/tr[@class="portID"]/td')
+
+        for port_nr in range(1, ports + 1):
+            try:
+                rx_value = int(page_inputs[port_nr * 4 + 1].text)
+            except (IndexError, ValueError):
+                rx_value = 0
+            rx.append(rx_value)
+            try:
+                tx_value = int(page_inputs[port_nr * 4 + 2].text)
+            except (IndexError, ValueError):
+                tx_value = 0
+            tx.append(tx_value)
+            try:
+                crc_value = int(page_inputs[port_nr * 4 + 3].text)
+            except (IndexError, ValueError):
+                crc_value = 0
+            crc.append(crc_value)
+
+        io_zeros = [0] * ports
+        return {
+            "traffic_rx": rx,
+            "traffic_tx": tx,
+            "sum_rx": rx,
+            "sum_tx": tx,
+            "crc_errors": crc,
+            "speed_io": io_zeros,
+        }
+
+
 class GS30xSeries(PageParser):
     """Parser for the GS30x switch series."""
 
@@ -991,6 +1101,7 @@ PARSERS = {
     "GS108E": GS108E,
     "GS108Ev3": GS108Ev3,
     "GS108EPv3": GS108EPv3,
+    "GS110EMX": GS110EMX,
     "GS305EP": GS305EP,
     "GS305EPP": GS305EPP,
     "GS308EP": GS308EP,

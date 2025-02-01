@@ -57,12 +57,12 @@ Supported firmware languages: GR (German), EN (English)
 
 ## Unsupported models
 
-| Model     | Support status  |
-| --------- | --------------- |
-| GS108PEv3 | Not yet started |
-| GS105Ev2  | Not yet started |
-| GS110EMX  | Not yet started |
-| XS512EM   | Not yet started |
+| Model     | Support status  | Firmware versions |
+| --------- | --------------- | ----------------- |
+| GS108PEv3 | In progress     |                   |
+| GS105Ev2  | Not yet started |                   |
+| GS110EMX  | In progress     | V1.0.2.8          |
+| XS512EM   | Not yet started |                   |
 
 `HOWTO_Add_New_Models.md` contains instructions to add unsupported models.
 
