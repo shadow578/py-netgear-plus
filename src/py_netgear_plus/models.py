@@ -201,7 +201,6 @@ class GS108EPv3(AutodetectedSwitchModel):
 class GS110EMX(AutodetectedSwitchModel):
     """Definition for Netgear GW108Ev3 model."""
 
-    SUPPORTED = False
     MODEL_NAME = "GS110EMX"
     PORTS = 10
     CHECKS_AND_RESULTS: ClassVar = [

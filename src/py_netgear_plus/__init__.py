@@ -26,7 +26,7 @@ from .models import (
 )
 from .parsers import NetgearPlusPageParserError, create_page_parser
 
-__version__ = "0.4.3rc1"
+__version__ = "0.4.3rc2"
 
 DEFAULT_PAGE = "index.htm"
 MAX_AUTHENTICATION_FAILURES = 3
@@ -664,8 +664,18 @@ class NetgearSwitchConnector:
                 switch_data[f"port_{port_number}_modus_speed"] = (
                     port_status[port_number].get("modus_speed") in PORT_MODUS_SPEED
                 )
-                port_connection_speed = port_status[port_number].get("connection_speed")
-                port_connection_speeds = {"1000M": 1000, "100M": 100, "10M": 10}
+                port_connection_speed = (
+                    port_status[port_number].get("connection_speed").upper()
+                )
+                port_connection_speeds = {
+                    "10G": 10000,
+                    "5G": 5000,
+                    "2.5G": 2500,
+                    "1G": 1000,
+                    "1000M": 1000,
+                    "100M": 100,
+                    "10M": 10,
+                }
                 if port_connection_speed in port_connection_speeds:
                     switch_data[f"port_{port_number}_connection_speed"] = (
                         port_connection_speeds[port_connection_speed]
