@@ -128,9 +128,8 @@ Ensure that the response of the login page is the first one sent (most switches 
 4. If PoE or LED controls are implemented, test them thoroughly.
 5. Add unit tests for the new model in the test suite:
    - Locate the unit test file in `tests/test__init__.py` that contains tests for existing switch models.
-   - Add the new model to the `FULLY_TESTED_MODELS` list with appropriate test values (rand, crypted password, and response content).
-   - Ensure the model is included in the `TEST_MODELS` list to be covered by parametrized tests.
-   - If the model lacks complete test data, add it to `PARTIALLY_TESTED_MODELS` with an appropriate `pytest.mark.xfail` annotation.
+   - Add the new model to the `MODEL_PARAMETERS` list with appropriate test values (rand, crypted password, and response content).
+   - If the model lacks complete test data, add it to `MODELS_FOR_GET_SWITCH_INFOS` with an appropriate `pytest.mark.xfail` annotation.
    - Run the test suite with `pytest` to confirm all tests pass, and fix any issues as needed.
 
 ## 6. Submit a Pull Request

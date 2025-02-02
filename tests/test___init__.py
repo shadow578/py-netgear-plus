@@ -26,7 +26,7 @@ from py_netgear_plus.models import (
 from py_netgear_plus.netgear_crypt import hex_hmac_md5, merge_hash
 
 # List of models with saved pages, extracted rand values and crypted passwords
-FULLY_TESTED_MODELS = [
+MODEL_PARAMETERS = [
     (GS105PE, "1578591883", "99915f464feee3be4193edd6dcc6b9b3", "<html></html>"),
     (GS108Ev3, "1763184457", "c2c905d5d99f592106a378bf709b737a", "<html></html>"),
     (
@@ -50,17 +50,19 @@ FULLY_TESTED_MODELS = [
         "<html></html>",
     ),
 ]
-PARTIALLY_TESTED_MODELS = [
+# Add models without a full set of pages with pytest.param(GSXYZ,
+#   marks=pytest.mark.xfail(reason="no valid data pages"))
+MODELS_FOR_GET_SWITCH_INFOS = [
     GS105PE,
     GS108Ev3,
     GS110EMX,
     GS308EP,
     GS308EPP,
     GS316EPP,
-    pytest.param(JGS524Ev2, marks=pytest.mark.xfail(reason="no valid data pages")),
+    JGS524Ev2,
 ]
 
-TEST_MODELS = [model[0] for model in FULLY_TESTED_MODELS]
+TEST_MODELS = [model[0] for model in MODEL_PARAMETERS]
 
 
 class PyTestPageFetcher:
@@ -176,7 +178,7 @@ def test_check_login_url(switch_model: type[AutodetectedSwitchModel]) -> None:
 
 @pytest.mark.parametrize(
     ("switch_model", "rand", "crypted_password", "content"),
-    FULLY_TESTED_MODELS,
+    MODEL_PARAMETERS,
 )
 def test_parse_login_form_rand(
     switch_model: type[AutodetectedSwitchModel],
@@ -225,7 +227,7 @@ def test_get_unique_id(switch_model: type[AutodetectedSwitchModel]) -> None:
 
 @pytest.mark.parametrize(
     ("switch_model", "rand", "crypted_password", "content"),
-    FULLY_TESTED_MODELS,
+    MODEL_PARAMETERS,
 )
 def test_get_login_password(
     switch_model: AutodetectedSwitchModel,
@@ -255,7 +257,7 @@ def test_get_login_password(
 
 @pytest.mark.parametrize(
     ("switch_model", "rand", "crypted_password", "content"),
-    FULLY_TESTED_MODELS,
+    MODEL_PARAMETERS,
 )
 def test_get_login_cookie(
     switch_model: AutodetectedSwitchModel,
@@ -339,7 +341,7 @@ def test_is_authenticated(page: str, expected: bool) -> None:  # noqa: FBT001
 
 @pytest.mark.parametrize(
     "switch_model",
-    PARTIALLY_TESTED_MODELS,
+    MODELS_FOR_GET_SWITCH_INFOS,
 )
 def test_get_switch_infos(switch_model: type[AutodetectedSwitchModel]) -> None:
     """Test initialization of NetgearSwitchConnector."""

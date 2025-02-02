@@ -254,9 +254,9 @@ class PageParser:
                 try:
                     status_text = portstatus_elems[port_nr].text.strip()
                     modus_speed_text = portspeed_elems[port_nr].text.strip()
-                    connection_speed_text = portconnectionspeed_elems[
-                        port_nr
-                    ].text.strip()
+                    connection_speed_text = strip_duplex(
+                        portconnectionspeed_elems[port_nr].text
+                    )
                 except (IndexError, AttributeError):
                     status_text = self.port_status.get(port_nr + 1, {}).get(
                         "status", None
@@ -412,7 +412,9 @@ class GS105PE(PageParser):
             try:
                 status_text = portstatus_elems[port_nr].text.strip()
                 modus_speed_text = portspeed_elems[port_nr].text.strip()
-                connection_speed_text = portconnectionspeed_elems[port_nr].text.strip()
+                connection_speed_text = strip_duplex(
+                    portconnectionspeed_elems[port_nr].text
+                )
             except (IndexError, AttributeError):
                 status_text = self.port_status.get(port_nr + 1, {}).get("status", None)
                 modus_speed_text = self.port_status.get(port_nr + 1, {}).get(
@@ -582,7 +584,7 @@ class GS110EMX(PageParser):
             xtree_port_attributes = element.xpath("./td")
             port_state_text = xtree_port_attributes[3].text.strip()
             modus_speed_text = xtree_port_attributes[4].text.strip()
-            connection_speed_text = xtree_port_attributes[5].text.strip()
+            connection_speed_text = strip_duplex(xtree_port_attributes[5].text)
 
             status_by_port[port_nr] = {
                 "status": port_state_text,
