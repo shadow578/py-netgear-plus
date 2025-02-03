@@ -28,7 +28,7 @@ jobs:
                 --repo="$GITHUB_REPOSITORY" \
                 --title="${GITHUB_REPOSITORY#*/} ${tag#v}" \
                 --generate-notes
-          elif [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(pre|rc)[0-9]+$ ]]
+          elif [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(pre|rc)[0-9]+$ ]]; then
             echo "Create prerelease $tag"
             gh release create "$tag" \
                 --repo="$GITHUB_REPOSITORY" \
