@@ -10,12 +10,12 @@ permissions:
   contents: write
 
 jobs:
-  if: >
-        ${{ github.event.workflow_run.conclusion == 'success' &&
-            github.event.workflow_run.ref =~ '^refs/tags/v[0-9]+\\.[0-9]+\\.[0-9]+(rc|pre)*[0-9]*$' }}
   release:
     name: Release pushed tag
     runs-on: ubuntu-latest
+    if: |
+      ${{ github.event.workflow_run.conclusion == 'success' &&
+      contains(github.ref, 'refs/tags/v') }}
     steps:
       - name: Create release
         env:
@@ -23,13 +23,18 @@ jobs:
           tag: ${{ github.ref_name }}
         run: |
           if [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            prerelease_flag=""
+            echo "Create release $tag"
+            gh release create "$tag" \
+                --repo="$GITHUB_REPOSITORY" \
+                --title="${GITHUB_REPOSITORY#*/} ${tag#v}" \
+                --generate-notes
+          elif [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(pre|rc)[0-9]+$ ]]
+            echo "Create prerelease $tag"
+            gh release create "$tag" \
+                --repo="$GITHUB_REPOSITORY" \
+                --title="${GITHUB_REPOSITORY#*/} ${tag#v}" \
+                --prerelease \
+                --generate-notes
           else
-            prerelease_flag="--prerelease"
+            echo "Not releasing $tag"
           fi
-
-          gh release create "$tag" \
-              --repo="$GITHUB_REPOSITORY" \
-              --title="${GITHUB_REPOSITORY#*/} ${tag#v}" \
-              $prerelease_flag \
-              --generate-notes
