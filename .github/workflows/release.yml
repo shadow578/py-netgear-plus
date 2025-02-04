@@ -5,15 +5,13 @@ on:
     tags:
       - "v*"
 
-permissions:
-  contents: write
-
 jobs:
   release:
     name: "Release pushed tag"
     runs-on: "ubuntu-latest"
     permissions:
       id-token: write
+      contents: write
     steps:
       - name: "Checkout the repository"
         uses: "actions/checkout@v4.2.2"
