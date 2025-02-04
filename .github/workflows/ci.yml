@@ -10,7 +10,7 @@ on:
 
 jobs:
   ci:
-    name: "CI & PyPI publish"
+    name: "Ruff and Pytest QA"
     runs-on: "ubuntu-latest"
     permissions:
       id-token: write
