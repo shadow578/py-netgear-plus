@@ -525,7 +525,7 @@ class GS108EPv3(PageParser):
         super().__init__()
 
 
-class GS110EMX(PageParser):
+class EMxSeries(PageParser):
     """Parser for the GS110EMX switch."""
 
     def __init__(self) -> None:
@@ -633,6 +633,22 @@ class GS110EMX(PageParser):
             "crc_errors": crc,
             "speed_io": io_zeros,
         }
+
+
+class GS110EMX(EMxSeries):
+    """Parser for the GS110EMX switch."""
+
+    def __init__(self) -> None:
+        """Initialize the GS110EMX parser."""
+        super().__init__()
+
+
+class XS512EM(EMxSeries):
+    """Parser for the GS110EMX switch."""
+
+    def __init__(self) -> None:
+        """Initialize the GS110EMX parser."""
+        super().__init__()
 
 
 class GS30xSeries(PageParser):
@@ -1111,4 +1127,5 @@ PARSERS = {
     "GS316EP": GS316EP,
     "GS316EPP": GS316EPP,
     "JGS524Ev2": JGS524Ev2,
+    "XS512EM": XS512EM,
 }

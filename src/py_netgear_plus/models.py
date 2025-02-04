@@ -198,15 +198,9 @@ class GS108EPv3(AutodetectedSwitchModel):
     ALLOWED_COOKIE_TYPES: ClassVar = ["GS108SID", "SID"]
 
 
-class GS110EMX(AutodetectedSwitchModel):
-    """Definition for Netgear GW108Ev3 model."""
+class EMxSeries(AutodetectedSwitchModel):
+    """Definition for Netgear GSxxxEMX and XSxxxEM models."""
 
-    MODEL_NAME = "GS110EMX"
-    PORTS = 10
-    CHECKS_AND_RESULTS: ClassVar = [
-        ("check_login_form_rand", [True]),
-        ("parse_login_title_tag", ["GS110EMX"]),
-    ]
     LOGIN_TEMPLATE: ClassVar = {
         "method": "post",
         "url": "http://{ip}/homepage.html",
@@ -240,6 +234,28 @@ class GS110EMX(AutodetectedSwitchModel):
             "url": "http://{ip}/iss/specific/logout.html",
             "params": {"Gambit": "_gambit"},
         }
+    ]
+
+
+class GS110EMX(EMxSeries):
+    """Definition for Netgear GS110EMX model."""
+
+    MODEL_NAME = "GS110EMX"
+    PORTS = 10
+    CHECKS_AND_RESULTS: ClassVar = [
+        ("check_login_form_rand", [True]),
+        ("parse_login_title_tag", ["GS110EMX"]),
+    ]
+
+
+class XS512EM(EMxSeries):
+    """Definition for Netgear XS512EM model."""
+
+    MODEL_NAME = "XS512EM"
+    PORTS = 12
+    CHECKS_AND_RESULTS: ClassVar = [
+        ("check_login_form_rand", [True]),
+        ("parse_login_title_tag", ["XS512EM"]),
     ]
 
 
@@ -568,4 +584,5 @@ MODELS = [
     GS316EP,
     GS316EPP,
     JGS524Ev2,
+    XS512EM,
 ]

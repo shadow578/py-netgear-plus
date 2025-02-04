@@ -19,6 +19,7 @@ from py_netgear_plus.models import (
     GS308EP,
     GS308EPP,
     GS316EPP,
+    XS512EM,
     AutodetectedSwitchModel,
     GS108Ev3,
     JGS524Ev2,
@@ -49,6 +50,12 @@ MODEL_PARAMETERS = [
         "26fe7cce1e480dd05e7f76155579d3ed",
         "<html></html>",
     ),
+    (
+        XS512EM,
+        "1113244551",
+        "6ca0965e7a44ee17eec5d575c8c56dd8",
+        '<html><input name="Gambit" value="cookie_value"></html>',
+    ),
 ]
 # Add models without a full set of pages with pytest.param(GSXYZ,
 #   marks=pytest.mark.xfail(reason="no valid data pages"))
@@ -60,6 +67,7 @@ MODELS_FOR_GET_SWITCH_INFOS = [
     GS308EPP,
     GS316EPP,
     JGS524Ev2,
+    XS512EM,
 ]
 
 TEST_MODELS = [model[0] for model in MODEL_PARAMETERS]
