@@ -26,7 +26,7 @@ from .models import (
 )
 from .parsers import NetgearPlusPageParserError, create_page_parser
 
-__version__ = "0.4.3rc9"
+__version__ = "0.4.3rc10"
 
 DEFAULT_PAGE = "index.htm"
 MAX_AUTHENTICATION_FAILURES = 3

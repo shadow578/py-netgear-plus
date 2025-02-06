@@ -22,6 +22,7 @@ from py_netgear_plus.models import (
     XS512EM,
     AutodetectedSwitchModel,
     GS108Ev3,
+    GS108PEv3,
     JGS524Ev2,
 )
 from py_netgear_plus.netgear_crypt import hex_hmac_md5, merge_hash
@@ -30,6 +31,7 @@ from py_netgear_plus.netgear_crypt import hex_hmac_md5, merge_hash
 MODEL_PARAMETERS = [
     (GS105PE, "1578591883", "99915f464feee3be4193edd6dcc6b9b3", "<html></html>"),
     (GS108Ev3, "1763184457", "c2c905d5d99f592106a378bf709b737a", "<html></html>"),
+    (GS108PEv3, "1735414426", "2038fc386c5e77ded19b31d7aa14a443", "<html></html>"),
     (
         GS110EMX,
         "2055460636",
@@ -62,6 +64,7 @@ MODEL_PARAMETERS = [
 MODELS_FOR_GET_SWITCH_INFOS = [
     GS105PE,
     GS108Ev3,
+    GS108PEv3,
     GS110EMX,
     GS308EP,
     GS308EPP,
