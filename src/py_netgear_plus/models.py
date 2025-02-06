@@ -55,7 +55,12 @@ class AutodetectedSwitchModel:
             "method": "post",
             "url": "http://{ip}/portStatistics.cgi",
             "params": {"hash": "_client_hash"},
-        }
+        },
+        {
+            "method": "post",
+            "url": "http://{ip}/port_statistics.htm",
+            "params": {"hash": "_client_hash"},
+        },
     ]
     PORT_STATUS_TEMPLATES: ClassVar = [
         {
@@ -178,19 +183,19 @@ class GS108Ev3(AutodetectedSwitchModel):
     ALLOWED_COOKIE_TYPES: ClassVar = ["GS108SID", "SID"]
 
 
-class GS108EPv3(AutodetectedSwitchModel):
+class GS108PEv3(AutodetectedSwitchModel):
     """Definition for Netgear GW108Ev3 model."""
 
     SUPPORTED = False
-    MODEL_NAME = "GS108Ev3"
+    MODEL_NAME = "GS108PEv3"
     PORTS = 8
     CHECKS_AND_RESULTS: ClassVar = [
         ("check_login_form_rand", [True]),
-        ("parse_login_title_tag", ["GS108EPv3"]),
+        ("parse_login_title_tag", ["GS108PEv3"]),
         (
             "parse_login_switchinfo_tag",
             [
-                "GS108EPv3 - 8-Port Gigabit ProSAFE Plus Switch",
+                "GS108PEv3 - 8-Port Gigabit ProSAFE Plus Switch",
                 "GS108PEv3 - 8-Port Gigabit Ethernet Smart Managed Plus Switch",
             ],
         ),
@@ -575,7 +580,7 @@ MODELS = [
     GS105PE,
     GS108E,
     GS108Ev3,
-    GS108EPv3,
+    GS108PEv3,
     GS110EMX,
     GS305EP,
     GS305EPP,
