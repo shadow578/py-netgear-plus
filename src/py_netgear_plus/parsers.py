@@ -607,7 +607,7 @@ class EMxSeries(PageParser):
 
         page_inputs = tree.xpath('//table/tr[@class="portID"]/td')
 
-        for port_nr in range(1, ports + 1):
+        for port_nr in range(ports):
             try:
                 rx_value = int(page_inputs[port_nr * 4 + 1].text)
             except (IndexError, ValueError):
