@@ -363,14 +363,6 @@ class GS105Ev2(PageParser):
         """Initialize the GS105Ev2 parser."""
         super().__init__()
 
-
-class GS105PE(PageParser):
-    """Parser for the GS105PE switch."""
-
-    def __init__(self) -> None:
-        """Initialize the GS105PE parser."""
-        super().__init__()
-
     def parse_switch_metadata(self, page: Response | BaseResponse) -> dict[str, Any]:
         """Parse switch info from the html page."""
         tree = html.fromstring(page.content)
@@ -491,6 +483,14 @@ class GS105PE(PageParser):
             "crc_errors": crc,
             "speed_io": io_zeros,
         }
+
+
+class GS105PE(GS105Ev2):
+    """Parser for the GS105PE switch."""
+
+    def __init__(self) -> None:
+        """Initialize the GS105PE parser."""
+        super().__init__()
 
 
 class GS105Ev3(PageParser):
