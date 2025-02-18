@@ -12,7 +12,7 @@
 <body onload="initTableCss();showCounter()">
 <form method="post" action="portStatistics.cgi">
 <input type="hidden" name="clearCounters" id="clearCounters" value="">
-<input type=hidden name='hash' id='hash' value="2323">
+<input type=hidden name='hash' id='hash' value="32163">
 </form>
 <form method="get" action="portStatistics.cgi">
 <table class="detailsAreaContainer">
@@ -32,13 +32,13 @@
 <td class="def firstCol" sel="text">1</td>
 <td class="def" sel="text">
 </td>
-<input type="hidden" value="4">
-<input type="hidden" value="861832643">
-<td class="def" sel="text">861832643
+<input type="hidden" value="7">
+<input type="hidden" value="2941988845">
+<td class="def" sel="text">2941988845
 </td>
-<input type="hidden" value="6">
-<input type="hidden" value="729134198">
-<td class="def" sel="text">729134198
+<input type="hidden" value="7">
+<input type="hidden" value="2935885862">
+<td class="def" sel="text">2935885862
 </td>
 <input type="hidden" value="0">
 <input type="hidden" value="0">
@@ -46,13 +46,13 @@
 <td class="def firstCol" sel="text">2</td>
 <td class="def" sel="text">
 </td>
-<input type="hidden" value="2">
-<input type="hidden" value="1988000000">
-<td class="def" sel="text">1988000000
+<input type="hidden" value="3">
+<input type="hidden" value="3790433613">
+<td class="def" sel="text">3790433613
 </td>
-<input type="hidden" value="1">
-<input type="hidden" value="689151989">
-<td class="def" sel="text">689151989
+<input type="hidden" value="2">
+<input type="hidden" value="197863268">
+<td class="def" sel="text">197863268
 </td>
 <input type="hidden" value="0">
 <input type="hidden" value="0">
@@ -61,12 +61,12 @@
 <td class="def" sel="text">
 </td>
 <input type="hidden" value="0">
-<input type="hidden" value="1894488650">
-<td class="def" sel="text">1894488650
+<input type="hidden" value="2892277147">
+<td class="def" sel="text">2892277147
 </td>
 <input type="hidden" value="0">
-<input type="hidden" value="2357206982">
-<td class="def" sel="text">2357206982
+<input type="hidden" value="3592457596">
+<td class="def" sel="text">3592457596
 </td>
 <input type="hidden" value="0">
 <input type="hidden" value="0">
@@ -75,12 +75,12 @@
 <td class="def" sel="text">
 </td>
 <input type="hidden" value="0">
-<input type="hidden" value="366146881">
-<td class="def" sel="text">366146881
+<input type="hidden" value="681249536">
+<td class="def" sel="text">681249536
 </td>
-<input type="hidden" value="1">
-<input type="hidden" value="1707522262">
-<td class="def" sel="text">1707522262
+<input type="hidden" value="2">
+<input type="hidden" value="774263004">
+<td class="def" sel="text">774263004
 </td>
 <input type="hidden" value="0">
 <input type="hidden" value="0">
@@ -89,12 +89,12 @@
 <td class="def" sel="text">
 </td>
 <input type="hidden" value="3">
-<input type="hidden" value="3123957230">
-<td class="def" sel="text">3123957230
+<input type="hidden" value="3488657569">
+<td class="def" sel="text">3488657569
 </td>
-<input type="hidden" value="1">
-<input type="hidden" value="2982801339">
-<td class="def" sel="text">2982801339
+<input type="hidden" value="3">
+<input type="hidden" value="2326229860">
+<td class="def" sel="text">2326229860
 </td>
 <input type="hidden" value="0">
 <input type="hidden" value="0">

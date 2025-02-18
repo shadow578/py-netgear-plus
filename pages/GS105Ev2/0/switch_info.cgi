@@ -128,7 +128,7 @@ function changeRefreshVal()
   <input type="text" name="gateway_address" id="gateway_address" value="10.0.1.1" size="15" maxlength="15" onmousedown="enableImage();" onkeypress="enableImage();">
   </td>
  </tr>
-<input type=hidden name='hash' id='hash' value="2323">
+<input type=hidden name='hash' id='hash' value="32163">
 <input type=hidden name='err_msg' id='err_msg' value='' disabled>
  </table></td></tr>
 </table></td></tr>
