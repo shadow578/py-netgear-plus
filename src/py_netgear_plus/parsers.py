@@ -992,8 +992,8 @@ class GS316EPP(GS31xSeries):
         super().__init__()
 
 
-class JGS524Ev2(PageParser):
-    """Parser for the GS108E v3switch."""
+class JGSxxxSeries(PageParser):
+    """Parser for the JGSxxx switch models."""
 
     META_DATA_PARTS = 9
     META_DATA_NAME = 1
@@ -1111,6 +1111,22 @@ class JGS524Ev2(PageParser):
         return None
 
 
+class JGS516PE(JGSxxxSeries):
+    """Parser for the JGS516EP switch."""
+
+    def __init__(self) -> None:
+        """Initialize the JGS516EP parser."""
+        super().__init__()
+
+
+class JGS524Ev2(JGSxxxSeries):
+    """Parser for the JGS524Ev2 switch."""
+
+    def __init__(self) -> None:
+        """Initialize the JGS524Ev2 parser."""
+        super().__init__()
+
+
 PARSERS = {
     "GS105E": GS105E,
     "GS105Ev2": GS105Ev2,
@@ -1126,6 +1142,7 @@ PARSERS = {
     "GS308EPP": GS308EPP,
     "GS316EP": GS316EP,
     "GS316EPP": GS316EPP,
+    "JGS516PE": JGS516PE,
     "JGS524Ev2": JGS524Ev2,
     "XS512EM": XS512EM,
 }

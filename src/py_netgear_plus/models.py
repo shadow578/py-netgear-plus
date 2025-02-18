@@ -20,7 +20,7 @@ class InvalidCryptFunctionError(Exception):
 
 
 class AutodetectedSwitchModel:
-    """Netgear Plus Switch Model Definition."""
+    """Base class definition for Netgear Plus Switch Models."""
 
     SUPPORTED = True
     ALLOWED_COOKIE_TYPES: ClassVar = ["SID"]
@@ -204,7 +204,7 @@ class GS108PEv3(AutodetectedSwitchModel):
 
 
 class EMxSeries(AutodetectedSwitchModel):
-    """Definition for Netgear GSxxxEMX and XSxxxEM models."""
+    """Parent class definition for Netgear GSxxxEMX and XSxxxEM models."""
 
     LOGIN_TEMPLATE: ClassVar = {
         "method": "post",
@@ -330,7 +330,7 @@ class GS30xSeries(AutodetectedSwitchModel):
 
 
 class GS30xEPPSeries(GS30xSeries):
-    """Parent class definition for Netgear GS3xxEPP series."""
+    """Parent class definition for Netgear GS3xEPP series."""
 
     def get_switch_poe_port_data(self, poe_port: int, state: str) -> dict:
         """Fill dict with form fields for switching a PoE port."""
@@ -360,7 +360,7 @@ class GS305EP(GS30xSeries):
 
 
 class GS305EPP(GS30xEPPSeries):
-    """Definition for Netgear GS305EP model."""
+    """Definition for Netgear GS305EPP model."""
 
     MODEL_NAME = "GS305EPP"
     PORTS = 5
@@ -398,10 +398,9 @@ class GS308EPP(GS30xEPPSeries):
     ]
 
 
-class GS316EP(GS30xSeries):
-    """Definition for Netgear GS316EP model."""
+class GS316Series(GS30xSeries):
+    """Parent class definition for Netgear GS316xx models."""
 
-    MODEL_NAME = "GS316EP"
     PORTS = 16
     POE_PORTS: ClassVar = [
         1,
@@ -420,13 +419,7 @@ class GS316EP(GS30xSeries):
         14,
         15,
     ]
-    POE_MAX_POWER_ALL_PORTS = 180
-    POE_MAX_POWER_SINGLE_PORT = 30
     POE_SCHEDULING = False  # True
-    CHECKS_AND_RESULTS: ClassVar = [
-        ("check_login_form_rand", [True]),
-        ("parse_login_title_tag", ["GS316EP"]),
-    ]
     LOGIN_TEMPLATE: ClassVar = {
         "method": "post",
         "url": "http://{ip}/homepage.html",
@@ -524,6 +517,18 @@ class GS316EP(GS30xSeries):
         }
 
 
+class GS316EP(GS316Series):
+    """Definition for Netgear GS316EP model."""
+
+    MODEL_NAME = "GS316EP"
+    POE_MAX_POWER_ALL_PORTS = 180
+    POE_MAX_POWER_SINGLE_PORT = 30
+    CHECKS_AND_RESULTS: ClassVar = [
+        ("check_login_form_rand", [True]),
+        ("parse_login_title_tag", ["GS316EP"]),
+    ]
+
+
 class GS316EPP(GS316EP):
     """Definition for Netgear GS316EPP model."""
 
@@ -535,15 +540,9 @@ class GS316EPP(GS316EP):
     ]
 
 
-class JGS524Ev2(AutodetectedSwitchModel):
-    """Definition for Netgear JGS524Ev2 model."""
+class JGSxxxSeries(AutodetectedSwitchModel):
+    """Parent class definition for Netgear JGSxxx models."""
 
-    MODEL_NAME = "JGS524Ev2"
-    PORTS = 24
-    CHECKS_AND_RESULTS: ClassVar = [
-        ("check_login_form_rand", [False]),
-        ("parse_first_script_tag", ["JGS524Ev2"]),
-    ]
     CRYPT_FUNCTION: ClassVar = "hex_hmac_md5"
     LOGIN_TEMPLATE: ClassVar = {
         "method": "post",
@@ -574,6 +573,28 @@ class JGS524Ev2(AutodetectedSwitchModel):
     ]
 
 
+class JGS516PE(JGSxxxSeries):
+    """Definition for Netgear JGS524Ev2 model."""
+
+    MODEL_NAME = "JGS516PE"
+    PORTS = 16
+    CHECKS_AND_RESULTS: ClassVar = [
+        ("check_login_form_rand", [False]),
+        ("parse_first_script_tag", ["JGS516PE"]),
+    ]
+
+
+class JGS524Ev2(JGSxxxSeries):
+    """Definition for Netgear JGS524Ev2 model."""
+
+    MODEL_NAME = "JGS524Ev2"
+    PORTS = 24
+    CHECKS_AND_RESULTS: ClassVar = [
+        ("check_login_form_rand", [False]),
+        ("parse_first_script_tag", ["JGS524Ev2"]),
+    ]
+
+
 MODELS = [
     GS105E,
     GS105Ev2,
@@ -588,6 +609,7 @@ MODELS = [
     GS308EPP,
     GS316EP,
     GS316EPP,
+    JGS516PE,
     JGS524Ev2,
     XS512EM,
 ]

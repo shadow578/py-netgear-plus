@@ -19,6 +19,7 @@ from py_netgear_plus.models import (
     GS308EP,
     GS308EPP,
     GS316EPP,
+    JGS516PE,
     XS512EM,
     AutodetectedSwitchModel,
     GS105Ev2,
@@ -30,7 +31,7 @@ from py_netgear_plus.netgear_crypt import hex_hmac_md5, merge_hash
 
 # List of models with saved pages, extracted rand values and crypted passwords
 MODEL_PARAMETERS = [
-    (GS105Ev2, "1578591883", "99915f464feee3be4193edd6dcc6b9b3", "<html></html>"),
+    (GS105Ev2, "897006492", "6e5b60b4082b2ac23103ec2e7caf0284", "<html></html>"),
     (GS105PE, "1578591883", "99915f464feee3be4193edd6dcc6b9b3", "<html></html>"),
     (GS108Ev3, "1763184457", "c2c905d5d99f592106a378bf709b737a", "<html></html>"),
     (GS108PEv3, "1735414426", "2038fc386c5e77ded19b31d7aa14a443", "<html></html>"),
@@ -47,6 +48,12 @@ MODEL_PARAMETERS = [
         "1127757600",
         "3c630eb52109743e94ef671e137b3de0",
         '<html><input name="Gambit" value="cookie_value"></html>',
+    ),
+    (
+        JGS516PE,
+        None,
+        "26fe7cce1e480dd05e7f76155579d3ed",
+        "<html></html>",
     ),
     (
         JGS524Ev2,
@@ -72,6 +79,7 @@ MODELS_FOR_GET_SWITCH_INFOS = [
     GS308EP,
     GS308EPP,
     GS316EPP,
+    JGS516PE,
     JGS524Ev2,
     XS512EM,
 ]
