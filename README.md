@@ -41,29 +41,32 @@ some basic configuration updates.
 | Model     | Ports | Firmware versions                      | Bootloader versions |
 | --------- | ----- | -------------------------------------- | ------------------- |
 | GS105E    | 5     | ?                                      |                     |
-| GS105Ev2  | 5     | ?                                      | ?                   |
-| GS105Ev3  | 5     | ?                                      |                     |
+| GS105Ev2  | 5     | V1.6.0.15                              | V1.4.0.5-VB         |
 | GS105PE   | 5     | V1.6.0.17                              | V1.6.0.2-VB         |
 | GS108E    | 8     | V1.00.11                               | V1.00.03            |
+| GS105Ev3  | 5     | ?                                      |                     |
 | GS108Ev3  | 8     | V2.00.05, V2.06.10, V2.06.17, V2.06.24 | V2.06.01 - V2.06.03 |
+| GS108PEv3 | 8     | V2.06.24                               | V0.00.00            |
 | GS110EMX  | 10    | V1.0.2.8                               |                     |
 | GS305EP   | 5     | V1.0.1.1                               |                     |
 | GS305EPP  | 5     | V1.0.1.4                               |                     |
+| GS308E    | 8     | V1.00.11                               | V1.00.03            |
 | GS308EP   | 8     | V1.0.0.10, V1.0.1.4                    |                     |
 | GS308EPP  | 8     | V1.0.1.4                               |                     |
 | GS316EP   | 16    | V1.0.4.4                               |                     |
 | GS316EPP  | 16    | V1.0.4.4                               |                     |
-| JGS524Ev2 | 24    | V2.6.0.48                              |                     |
+| JGS516PE  | 16    | V2.6.0.48                              |                     |
+| JGS24Ev2  | 24    | V2.6.0.48                              |                     |
 | XS512EM   | 12    | V1.0.2.8                               |                     |
 
 Supported firmware languages: GR (German), EN (English)
 
 ## Unsupported models
 
-| Model     | Support status  | Firmware versions |
-| --------- | --------------- | ----------------- |
-| GS108PEv3 | In progress     |                   |
-| GS105Ev2  | Not yet started |                   |
+| Model    | Support status                                                  |
+| -------- | --------------------------------------------------------------- |
+| JGS524PE | See [#93](https://github.com/ckarrie/ha-netgear-plus/issues/93) |
+| MS108EUP | See [#91](https://github.com/ckarrie/ha-netgear-plus/issues/91) |
 
 `HOWTO_Add_New_Models.md` contains instructions to add unsupported models.
 
