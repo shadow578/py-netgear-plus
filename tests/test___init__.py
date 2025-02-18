@@ -16,6 +16,7 @@ from py_netgear_plus.fetcher import URL_REQUEST_TIMEOUT, BaseResponse
 from py_netgear_plus.models import (
     GS105PE,
     GS110EMX,
+    GS308E,
     GS308EP,
     GS308EPP,
     GS316EPP,
@@ -41,6 +42,7 @@ MODEL_PARAMETERS = [
         "3e51baecfd84e4c0010662d6d92a1253",
         '<html><input name="Gambit" value="cookie_value"></html>',
     ),
+    (GS308E, "2102219470", "e8e0a9820f683fe8e64da0014a49902c", "<html></html>"),
     (GS308EP, "990464497", "43001294a37a3f2e1f919b64072a1a32", "<html></html>"),
     (GS308EPP, "1425622205", "e65ad5ee60718843afafeaa03bd1ec49", "<html></html>"),
     (
@@ -76,6 +78,7 @@ MODELS_FOR_GET_SWITCH_INFOS = [
     GS108Ev3,
     GS108PEv3,
     GS110EMX,
+    GS308E,
     GS308EP,
     GS308EPP,
     GS316EPP,

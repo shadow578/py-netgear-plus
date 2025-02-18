@@ -165,7 +165,7 @@ class GS108E(AutodetectedSwitchModel):
 
 
 class GS108Ev3(AutodetectedSwitchModel):
-    """Definition for Netgear GW108Ev3 model."""
+    """Definition for Netgear GS108Ev3 model."""
 
     MODEL_NAME = "GS108Ev3"
     PORTS = 8
@@ -184,9 +184,8 @@ class GS108Ev3(AutodetectedSwitchModel):
 
 
 class GS108PEv3(AutodetectedSwitchModel):
-    """Definition for Netgear GW108Ev3 model."""
+    """Definition for Netgear GS108PEv3 model."""
 
-    SUPPORTED = False
     MODEL_NAME = "GS108PEv3"
     PORTS = 8
     CHECKS_AND_RESULTS: ClassVar = [
@@ -201,6 +200,25 @@ class GS108PEv3(AutodetectedSwitchModel):
         ),
     ]
     ALLOWED_COOKIE_TYPES: ClassVar = ["GS108SID", "SID"]
+
+
+class GS308E(AutodetectedSwitchModel):
+    """Definition for Netgear GS308E model."""
+
+    MODEL_NAME = "GS308E"
+    PORTS = 8
+    CHECKS_AND_RESULTS: ClassVar = [
+        ("check_login_form_rand", [True]),
+        ("parse_login_title_tag", ["GS308E"]),
+        (
+            "parse_login_switchinfo_tag",
+            [
+                "GS308E - 8-Port Gigabit ProSAFE Plus Switch",
+                "GS308E - 8-Port Gigabit Ethernet Smart Managed Plus Switch",
+            ],
+        ),
+    ]
+    ALLOWED_COOKIE_TYPES: ClassVar = ["GS308SID", "SID"]
 
 
 class EMxSeries(AutodetectedSwitchModel):
@@ -265,7 +283,7 @@ class XS512EM(EMxSeries):
 
 
 class GS30xSeries(AutodetectedSwitchModel):
-    """Parent class definition for Netgear GS3xx series."""
+    """Parent class definition for Netgear GS30x series."""
 
     SWITCH_INFO_TEMPLATES: ClassVar = [
         {"method": "get", "url": "http://{ip}/dashboard.cgi"}
@@ -329,8 +347,8 @@ class GS30xSeries(AutodetectedSwitchModel):
         }
 
 
-class GS30xEPPSeries(GS30xSeries):
-    """Parent class definition for Netgear GS3xEPP series."""
+class GS30xEPxSeries(GS30xSeries):
+    """Parent class definition for Netgear GS30xEPx series."""
 
     def get_switch_poe_port_data(self, poe_port: int, state: str) -> dict:
         """Fill dict with form fields for switching a PoE port."""
@@ -346,7 +364,7 @@ class GS30xEPPSeries(GS30xSeries):
         }
 
 
-class GS305EP(GS30xSeries):
+class GS305EP(GS30xEPxSeries):
     """Definition for Netgear GS305EP model."""
 
     MODEL_NAME = "GS305EP"
@@ -359,7 +377,7 @@ class GS305EP(GS30xSeries):
     ]
 
 
-class GS305EPP(GS30xEPPSeries):
+class GS305EPP(GS30xEPxSeries):
     """Definition for Netgear GS305EPP model."""
 
     MODEL_NAME = "GS305EPP"
@@ -385,7 +403,7 @@ class GS308EP(GS30xSeries):
     ]
 
 
-class GS308EPP(GS30xEPPSeries):
+class GS308EPP(GS30xEPxSeries):
     """Definition for Netgear GS308EP model."""
 
     MODEL_NAME = "GS308EPP"
@@ -574,7 +592,7 @@ class JGSxxxSeries(AutodetectedSwitchModel):
 
 
 class JGS516PE(JGSxxxSeries):
-    """Definition for Netgear JGS524Ev2 model."""
+    """Definition for Netgear JGS516PE model."""
 
     MODEL_NAME = "JGS516PE"
     PORTS = 16
@@ -602,6 +620,7 @@ MODELS = [
     GS108E,
     GS108Ev3,
     GS108PEv3,
+    GS308E,
     GS110EMX,
     GS305EP,
     GS305EPP,
