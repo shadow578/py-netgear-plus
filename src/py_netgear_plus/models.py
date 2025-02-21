@@ -613,6 +613,18 @@ class JGS524Ev2(JGSxxxSeries):
     ]
 
 
+class GS116Ev2(JGSxxxSeries):
+    """Definition for Netgear GS116Ev2 model."""
+
+    MODEL_NAME = "GS116Ev2"
+    PORTS = 16
+    POE_PORTS: ClassVar = []
+    CHECKS_AND_RESULTS: ClassVar = [
+        ("check_login_form_rand", [False]),
+        ("parse_first_script_tag", ["GS116Ev2"]),
+    ]
+
+
 MODELS = [
     GS105E,
     GS105Ev2,
@@ -631,4 +643,5 @@ MODELS = [
     JGS516PE,
     JGS524Ev2,
     XS512EM,
+    GS116Ev2,
 ]
