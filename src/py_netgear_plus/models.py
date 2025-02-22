@@ -243,7 +243,7 @@ class GS308E(AutodetectedSwitchModel):
             ],
         ),
     ]
-    ALLOWED_COOKIE_TYPES: ClassVar = ["GS308SID", "SID"]
+    ALLOWED_COOKIE_TYPES: ClassVar = ["GS108SID", "SID"]
 
 
 class EMxSeries(AutodetectedSwitchModel):
