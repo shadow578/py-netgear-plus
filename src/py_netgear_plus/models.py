@@ -196,7 +196,7 @@ class GS108Ev4(AutodetectedSwitchModel):
         {"method": "get", "url": "http://{ip}/dashboard.cgi"}
     ]
     PORT_STATUS_TEMPLATES: ClassVar = [
-        {"method": "get", "url": "http://{ip}/dashboard.cgi" }
+        {"method": "get", "url": "http://{ip}/dashboard.cgi"}
     ]
     PORT_STATISTICS_TEMPLATES: ClassVar = [
         {
