@@ -525,6 +525,20 @@ class GS108PEv3(PageParser):
         super().__init__()
 
 
+class GS305E(GS105Ev2):
+    """Parser for the GS305E switch."""
+
+    def __init__(self) -> None:
+        """Initialize the GS305E parser."""
+        super().__init__()
+
+    def parse_port_statistics(
+        self, page: Response | BaseResponse, ports: int
+    ) -> dict[str, Any]:
+        """Parse port statistics from the html page."""
+        return self.parse_port_statistics_v2(page, ports)
+
+
 class GS308E(PageParser):
     """Parser for the GS308E switch."""
 
@@ -1143,6 +1157,7 @@ PARSERS = {
     "GS108E": GS108E,
     "GS108Ev3": GS108Ev3,
     "GS108PEv3": GS108PEv3,
+    "GS305E": GS305E,
     "GS308E": GS308E,
     "GS110EMX": GS110EMX,
     "GS305EP": GS305EP,
