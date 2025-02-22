@@ -517,6 +517,116 @@ class GS108Ev3(PageParser):
         super().__init__()
 
 
+class GS108Ev4(PageParser):
+    """Parser for the GS108Ev4 switch."""
+
+    def __init__(self) -> None:
+        """Initialize the GS108Ev4 parser."""
+        super().__init__()
+
+    def parse_switch_metadata(self, page: Response | BaseResponse) -> dict[str, Any]:
+        """Parse switch info from the html page."""
+        tree = html.fromstring(page.content)
+
+        titles = tree.xpath('//div[@class="hid_info_title"]/span/text()')
+        _LOGGER.debug( titles )
+        versions = tree.xpath('//div[@class="hid_info_title"]/following-sibling::div[1]/span/text()')
+        _LOGGER.debug( versions )
+        data = dict(zip(titles, versions))
+        _LOGGER.debug( data )
+
+        switch_name = get_first_value(tree, '//input[@id="switchName"]')
+        switch_serial_number = data["ml198"]
+        self._switch_firmware = data["ml089"]
+        # unable to find bootloader version
+        self._switch_bootloader = "unknown"
+
+        return {
+            "switch_name": switch_name,
+            "switch_serial_number": switch_serial_number,
+            "switch_bootloader": self._switch_bootloader,
+            "switch_firmware": self._switch_firmware,
+        }
+
+    def parse_port_status(
+        self, page: Response | BaseResponse, ports: int
+    ) -> dict[int, dict[str, Any]]:
+        """Parse port status from the html page."""
+        status_by_port = {}
+
+        tree = html.fromstring(page.content)
+        blocks = tree.xpath('//li[contains(@class, "list_item")]')
+
+        for port_nr in range(ports):
+            try:
+                # xml_string = html.tostring( blocks[port_nr], pretty_print=True, encoding="unicode")
+                # _LOGGER.debug( f"Block {port_nr} als XML:\n{xml_string}\n{'-' * 40}" )
+                port = blocks[port_nr].xpath('.//input[@class="port"]/@value')[0]
+                status = blocks[port_nr].xpath('.//span[contains(@class, "padding_r_18")]/span/text()')[0]
+                speed = blocks[port_nr].xpath('.//input[@class="Speed"]/@value')[0]
+                linkSpeed = blocks[port_nr].xpath('.//input[@class="LinkedSpeed"]/@value')[0]
+                speedtext= [ "0", "Auto", "Disable", "3", "10M full", "5", "100M full" ][int(speed)]
+            except (IndexError, AttributeError):
+                status_text = self.port_status.get(port_nr + 1, {}).get(
+                    "status", None
+                )
+                modus_speed_text = self.port_status.get(port_nr + 1, {}).get(
+                    "modus_speed", None
+                )
+                connection_speed_text = self.port_status.get(port_nr + 1, {}).get(
+                    "connection_speed", None
+                )
+            status_by_port[int(port)] = {
+                "status": status,
+                "modus_speed": speedtext,
+                "connection_speed": linkSpeed,
+            }
+
+        self.port_status = status_by_port
+        _LOGGER.debug("Port Status is %s", self.port_status)
+        return status_by_port
+
+    def parse_port_statistics(
+       self, page: Response | BaseResponse, ports: int
+    ) -> dict[str, Any]:
+        """Parse port statistics from the html page."""
+        tree = html.fromstring(page.content)
+        #_LOGGER.debug( "GS108Ev4.parse_port_statistics, page = %s"page.content )
+        li_elements = tree.xpath("//li")
+        #_LOGGER.debug( len(li_elements) )
+        data = {}
+        rx = [0]*ports
+        tx = [0]*ports
+        crc = [0]*ports
+        for li in li_elements:
+            try:
+                port_number = li.xpath(".//span[1]/text()")
+                if not port_number:
+                    continue
+                port_number = int(port_number[0].strip())
+            except ValueError:
+                continue
+            inputs = li.xpath("following-sibling::input[@type='hidden']/@value")
+            data[port_number] = list(map(int, inputs[:6]))
+            rx[port_number-1]  = int(data[port_number][1])
+            tx[port_number-1]  = int(data[port_number][3])
+            crc[port_number-1] = int(data[port_number][5])
+        #_LOGGER.debug( data )
+        #_LOGGER.debug( rx )
+        #_LOGGER.debug( tx )
+        #_LOGGER.debug( crc)
+        io_zeros = [0] * ports
+        ret = {
+            "traffic_rx": rx,
+            "traffic_tx": tx,
+            "sum_rx": rx,
+            "sum_tx": tx,
+            "crc_errors": crc,
+            "speed_io": io_zeros,
+        }
+        _LOGGER.debug(ret)
+        return ret;
+
 class GS108PEv3(PageParser):
     """Parser for the GS108PEv3 switch."""
 
@@ -1142,6 +1252,7 @@ PARSERS = {
     "GS105Ev3": GS105Ev3,
     "GS108E": GS108E,
     "GS108Ev3": GS108Ev3,
+    "GS108Ev4": GS108Ev4,
     "GS108PEv3": GS108PEv3,
     "GS308E": GS308E,
     "GS110EMX": GS110EMX,
