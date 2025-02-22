@@ -425,7 +425,7 @@ class GS105Ev2(PageParser):
         _LOGGER.debug("Port Status is %s", self.port_status)
         return status_by_port
 
-    def parse_port_statistics_v2(
+    def parse_port_statistics(
         self, page: Response | BaseResponse, ports: int
     ) -> dict[str, Any]:
         """Parse port statistics from the html page."""
