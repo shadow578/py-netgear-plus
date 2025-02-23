@@ -2,6 +2,8 @@
 
 from typing import ClassVar
 
+from py_netgear_plus.utils import get_all_child_classes_list
+
 
 class MultipleModelsDetectedError(Exception):
     """Detection of switch model was not unique."""
@@ -675,25 +677,4 @@ class GS116Ev2(JGSxxxSeries):
     ]
 
 
-MODELS = [
-    GS105E,
-    GS105Ev2,
-    GS105PE,
-    GS108E,
-    GS108Ev3,
-    GS108Ev4,
-    GS108PEv3,
-    GS305E,
-    GS308E,
-    GS110EMX,
-    GS305EP,
-    GS305EPP,
-    GS308EP,
-    GS308EPP,
-    GS316EP,
-    GS316EPP,
-    JGS516PE,
-    JGS524Ev2,
-    XS512EM,
-    GS116Ev2,
-]
+MODELS = get_all_child_classes_list(AutodetectedSwitchModel, "MODEL_NAME")

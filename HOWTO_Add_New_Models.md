@@ -11,7 +11,7 @@ To add a new switch model, you need to update two files:
 
 ## 1. Create a New Class for the Switch Model
 
-Each switch model should inherit from `AutodetectedSwitchModel` or from the most similar existing model. Inheriting from a similar model reduces duplication and ensures compatibility with the library's structure.
+Each switch model should inherit from `AutodetectedSwitchModel` or from the most similar existing model. Inheriting from a similar model reduces duplication and ensures compatibility with the library's structure. Ensure that `MODEL_NAME` is identical to the class name. Intermediate classes that define logic shared by multiple models should not have a defined `MODEL_NAME` to prevend that `py_netgear_plus.autodetect_model()` finds multiple matching classes.
 
 You can create a new switch model class by following the structure below:
 
@@ -79,39 +79,9 @@ If the switch model supports additional functionality (such as PoE settings, LED
 
 Refer to existing switch models in `models.py` for additional examples.
 
-## 3. Register the Model in the `MODELS` List
+## 3. Create a Parser Class and Register It in `parsers.py`
 
-At the bottom of `models.py`, find the `MODELS` list and add the new model class:
-
-```python
-MODELS = [
-    GS105E,
-    GS105Ev2,
-    GS105PE,
-    GS108E,
-    GSXYZ,  # Add the newly created model here
-]
-```
-
-This ensures the new model is available for auto-detection.
-
-## 4. Create a Parser Class and Register It in `parsers.py`
-
-Each switch model has its own parser class. If the new model introduces unique parsing logic, create a new parser class in `parsers.py`. Ensure that this parser class inherits from the most similar existing parser class to maintain consistency.
-
-After defining the parser class, add it to the `PARSERS` list at the end of `parsers.py`:
-
-```python
-PARSERS = {
-    "GS105E": GS105E,
-    "GS105Ev2": GS105Ev2,
-    "GS105PE": GS105PE,
-    "GS108E": GS108E,
-    "GSXYZ": GSXYZ,  # Add the newly created parser class here
-}
-```
-
-This ensures that the model can be correctly parsed during auto-detection.
+Each switch model has its own parser class. If the new model introduces unique parsing logic, create a new parser class in `parsers.py`. Ensure that this parser class inherits from the most similar existing parser class to maintain consistency. The name of the parser class should be identical to the name of the model in `models.py`.
 
 ## 4. Add pages responses to the `pages/` folder
 
