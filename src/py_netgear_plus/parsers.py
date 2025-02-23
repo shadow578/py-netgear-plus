@@ -532,12 +532,6 @@ class GS305E(GS105Ev2):
         """Initialize the GS305E parser."""
         super().__init__()
 
-    def parse_port_statistics(
-        self, page: Response | BaseResponse, ports: int
-    ) -> dict[str, Any]:
-        """Parse port statistics from the html page."""
-        return self.parse_port_statistics_v2(page, ports)
-
 
 class GS308E(PageParser):
     """Parser for the GS308E switch."""
