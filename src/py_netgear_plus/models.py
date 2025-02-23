@@ -183,6 +183,31 @@ class GS108Ev3(AutodetectedSwitchModel):
     ALLOWED_COOKIE_TYPES: ClassVar = ["GS108SID", "SID"]
 
 
+class GS108Ev4(AutodetectedSwitchModel):
+    """Definition for Netgear GW108Ev4 model."""
+
+    MODEL_NAME = "GS108Ev4"
+    PORTS = 8
+    CHECKS_AND_RESULTS: ClassVar = [
+        ("check_login_form_rand", [True]),
+        ("parse_login_title_tag", ["GS108Ev4"]),
+    ]
+    SWITCH_INFO_TEMPLATES: ClassVar = [
+        {"method": "get", "url": "http://{ip}/dashboard.cgi"}
+    ]
+    PORT_STATUS_TEMPLATES: ClassVar = [
+        {"method": "get", "url": "http://{ip}/dashboard.cgi"}
+    ]
+    PORT_STATISTICS_TEMPLATES: ClassVar = [
+        {
+            "method": "get",
+            "url": "http://{ip}/portStatistics.cgi",
+            "params": {"hash": "_client_hash"},
+        },
+    ]
+    ALLOWED_COOKIE_TYPES: ClassVar = ["GS108SID", "SID"]
+
+
 class GS108PEv3(AutodetectedSwitchModel):
     """Definition for Netgear GS108PEv3 model."""
 
@@ -243,7 +268,7 @@ class GS308E(AutodetectedSwitchModel):
             ],
         ),
     ]
-    ALLOWED_COOKIE_TYPES: ClassVar = ["GS308SID", "SID"]
+    ALLOWED_COOKIE_TYPES: ClassVar = ["GS108SID", "SID"]
 
 
 class EMxSeries(AutodetectedSwitchModel):
@@ -656,6 +681,7 @@ MODELS = [
     GS105PE,
     GS108E,
     GS108Ev3,
+    GS108Ev4,
     GS108PEv3,
     GS305E,
     GS308E,
