@@ -8,6 +8,7 @@ from lxml import html
 from requests import Response
 
 from .fetcher import BaseResponse
+from .utils import get_all_child_classes_dict
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -1260,26 +1261,4 @@ class GS116Ev2(JGSxxxSeries):
         super().__init__()
 
 
-PARSERS = {
-    "GS105E": GS105E,
-    "GS105Ev2": GS105Ev2,
-    "GS105PE": GS105PE,
-    "GS105Ev3": GS105Ev3,
-    "GS108E": GS108E,
-    "GS108Ev3": GS108Ev3,
-    "GS108Ev4": GS108Ev4,
-    "GS108PEv3": GS108PEv3,
-    "GS305E": GS305E,
-    "GS308E": GS308E,
-    "GS110EMX": GS110EMX,
-    "GS305EP": GS305EP,
-    "GS305EPP": GS305EPP,
-    "GS308EP": GS308EP,
-    "GS308EPP": GS308EPP,
-    "GS316EP": GS316EP,
-    "GS316EPP": GS316EPP,
-    "JGS516PE": JGS516PE,
-    "JGS524Ev2": JGS524Ev2,
-    "XS512EM": XS512EM,
-    "GS116Ev2": GS116Ev2,
-}
+PARSERS = get_all_child_classes_dict(PageParser)
