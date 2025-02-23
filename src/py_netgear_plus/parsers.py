@@ -616,7 +616,7 @@ class GS108Ev4(PageParser):
             tx[port_number - 1] = int(data[port_number][3])
             crc[port_number - 1] = int(data[port_number][5])
         io_zeros = [0] * ports
-        ret = {
+        return {
             "traffic_rx": rx,
             "traffic_tx": tx,
             "sum_rx": rx,
@@ -624,8 +624,6 @@ class GS108Ev4(PageParser):
             "crc_errors": crc,
             "speed_io": io_zeros,
         }
-        return ret
-
 
 class GS108PEv3(PageParser):
     """Parser for the GS108PEv3 switch."""
