@@ -529,13 +529,10 @@ class GS108Ev4(PageParser):
         tree = html.fromstring(page.content)
 
         titles = tree.xpath('//div[@class="hid_info_title"]/span/text()')
-        _LOGGER.debug(titles)
-        versions = tree.xpath(
+        values = tree.xpath(
             '//div[@class="hid_info_title"]/following-sibling::div[1]/span/text()'
         )
-        _LOGGER.debug(versions)
-        data = dict(zip(titles, versions, strict=False))
-        _LOGGER.debug(data)
+        data = dict(zip(titles, values, strict=False))
 
         switch_name = get_first_value(tree, '//input[@id="switchName"]')
         switch_serial_number = data["ml198"]
@@ -593,7 +590,6 @@ class GS108Ev4(PageParser):
             }
 
         self.port_status = status_by_port
-        _LOGGER.debug("Port Status is %s", self.port_status)
         return status_by_port
 
     def parse_port_statistics(
@@ -628,7 +624,6 @@ class GS108Ev4(PageParser):
             "crc_errors": crc,
             "speed_io": io_zeros,
         }
-        _LOGGER.debug(ret)
         return ret
 
 
