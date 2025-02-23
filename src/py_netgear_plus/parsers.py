@@ -625,6 +625,7 @@ class GS108Ev4(PageParser):
             "speed_io": io_zeros,
         }
 
+
 class GS108PEv3(PageParser):
     """Parser for the GS108PEv3 switch."""
 
