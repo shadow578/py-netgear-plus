@@ -1,0 +1,73 @@
+{
+  "resp": {
+    "status": "success",
+    "respCode": 0,
+    "respMsg": "Operation success"
+  },
+  "system_information": {
+    "sysName": "",
+    "sysLocation": "",
+    "sysContact": "",
+    "sysSN": "79V13B5VA0039",
+    "sysProduct": "XS508TM S3600 Series 8-Port 10G/Multi-Gigabit Ethernet Smart Switch with 2 SFP+ Ports, 7.8.11.17, 1.0.0.2",
+    "sysMac": "54:07:7D:0D:98:31",
+    "sysObjectOid": "1.3.6.1.4.1.4526.100.4.100",
+    "sysDateTime": "2025-02-22 02:12:40",
+    "sysUpTimeDays": 0,
+    "sysUpTimeHours": 0,
+    "sysUpTimeMins": 8,
+    "sysUpTimeSecs": 39,
+    "txtVerModelName": "XS508TM",
+    "txtBootVer": "1.0.0.2",
+    "txtSwVer": "7.8.11.17",
+    "powers": [
+      {
+        "txtPowerSupply": 1,
+        "txtPowerDescriptor": "PS-1",
+        "txtPowerType": 1,
+        "txtPowerState": 2
+      }
+    ],
+    "thermals": [
+      {
+        "sensor": 1,
+        "temp": 36,
+        "maxTemp": 36,
+        "state": 2,
+        "descp": "Local"
+      },
+      {
+        "sensor": 2,
+        "temp": 34,
+        "maxTemp": 34,
+        "state": 2,
+        "descp": "Remote-1"
+      },
+      {
+        "sensor": 3,
+        "temp": 36,
+        "maxTemp": 36,
+        "state": 2,
+        "descp": "Remote-2"
+      }
+    ],
+    "fans": [
+      {
+        "txtFan": 1,
+        "txtFanDescriptor": "FAN-1",
+        "txtFanType": 1,
+        "txtFanSpeed": 2968,
+        "txtDutyLevel": 29,
+        "txtFanState": 2
+      },
+      {
+        "txtFan": 2,
+        "txtFanDescriptor": "FAN-2",
+        "txtFanType": 1,
+        "txtFanSpeed": 3098,
+        "txtDutyLevel": 29,
+        "txtFanState": 2
+      }
+    ]
+  }
+}

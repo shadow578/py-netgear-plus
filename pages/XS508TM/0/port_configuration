@@ -1,0 +1,215 @@
+{
+  "resp": {
+    "status": "success",
+    "respCode": 0,
+    "respMsg": "Operation success"
+  },
+  "port_configuration": {
+    "phy_ports": [
+      {
+        "port": 1,
+        "descp": "",
+        "type": 1,
+        "admin": 1,
+        "autoNego": 0,
+        "speedmode": 1,
+        "speedstatus": 7,
+        "linkstatus": 0,
+        "trap": 1,
+        "maxFrmsz": 1500,
+        "flowCtrl": 0,
+        "mac": "54:07:7D:0D:98:33"
+      },
+      {
+        "port": 2,
+        "descp": "",
+        "type": 1,
+        "admin": 1,
+        "autoNego": 0,
+        "speedmode": 1,
+        "speedstatus": 130,
+        "linkstatus": 1,
+        "trap": 1,
+        "maxFrmsz": 1500,
+        "flowCtrl": 0,
+        "mac": "54:07:7D:0D:98:33"
+      },
+      {
+        "port": 3,
+        "descp": "",
+        "type": 1,
+        "admin": 1,
+        "autoNego": 0,
+        "speedmode": 1,
+        "speedstatus": 130,
+        "linkstatus": 1,
+        "trap": 1,
+        "maxFrmsz": 1500,
+        "flowCtrl": 0,
+        "mac": "54:07:7D:0D:98:33"
+      },
+      {
+        "port": 4,
+        "descp": "",
+        "type": 1,
+        "admin": 1,
+        "autoNego": 0,
+        "speedmode": 1,
+        "speedstatus": 130,
+        "linkstatus": 1,
+        "trap": 1,
+        "maxFrmsz": 1500,
+        "flowCtrl": 0,
+        "mac": "54:07:7D:0D:98:33"
+      },
+      {
+        "port": 5,
+        "descp": "",
+        "type": 1,
+        "admin": 1,
+        "autoNego": 0,
+        "speedmode": 1,
+        "speedstatus": 130,
+        "linkstatus": 1,
+        "trap": 1,
+        "maxFrmsz": 1500,
+        "flowCtrl": 0,
+        "mac": "54:07:7D:0D:98:33"
+      },
+      {
+        "port": 6,
+        "descp": "",
+        "type": 1,
+        "admin": 1,
+        "autoNego": 0,
+        "speedmode": 1,
+        "speedstatus": 130,
+        "linkstatus": 1,
+        "trap": 1,
+        "maxFrmsz": 1500,
+        "flowCtrl": 0,
+        "mac": "54:07:7D:0D:98:33"
+      },
+      {
+        "port": 7,
+        "descp": "",
+        "type": 1,
+        "admin": 1,
+        "autoNego": 0,
+        "speedmode": 1,
+        "speedstatus": 130,
+        "linkstatus": 1,
+        "trap": 1,
+        "maxFrmsz": 1500,
+        "flowCtrl": 0,
+        "mac": "54:07:7D:0D:98:33"
+      },
+      {
+        "port": 8,
+        "descp": "",
+        "type": 1,
+        "admin": 1,
+        "autoNego": 0,
+        "speedmode": 1,
+        "speedstatus": 130,
+        "linkstatus": 1,
+        "trap": 1,
+        "maxFrmsz": 1500,
+        "flowCtrl": 0,
+        "mac": "54:07:7D:0D:98:33"
+      },
+      {
+        "port": 9,
+        "descp": "",
+        "type": 1,
+        "admin": 1,
+        "autoNego": 1,
+        "speedmode": 8,
+        "speedstatus": 8,
+        "linkstatus": 1,
+        "trap": 1,
+        "maxFrmsz": 1500,
+        "flowCtrl": 0,
+        "mac": "54:07:7D:0D:98:33"
+      },
+      {
+        "port": 10,
+        "descp": "",
+        "type": 1,
+        "admin": 1,
+        "autoNego": 1,
+        "speedmode": 8,
+        "speedstatus": 8,
+        "linkstatus": 1,
+        "trap": 1,
+        "maxFrmsz": 1500,
+        "flowCtrl": 0,
+        "mac": "54:07:7D:0D:98:33"
+      }
+    ],
+    "lag_ports": [
+      {
+        "port": 30,
+        "descp": "",
+        "type": 1,
+        "admin": 1,
+        "autoNego": 65535,
+        "speedmode": 129,
+        "speedstatus": 129,
+        "linkstatus": 1,
+        "trap": 1,
+        "maxFrmsz": 1500,
+        "flowCtrl": "",
+        "mac": "54:07:7D:0D:98:33"
+      },
+      {
+        "port": 31,
+        "descp": "",
+        "type": 1,
+        "admin": 1,
+        "autoNego": 65535,
+        "speedmode": 129,
+        "speedstatus": 129,
+        "linkstatus": 1,
+        "trap": 1,
+        "maxFrmsz": 1500,
+        "flowCtrl": "",
+        "mac": "54:07:7D:0D:98:33"
+      },
+      {
+        "port": 32,
+        "descp": "",
+        "type": 1,
+        "admin": 1,
+        "autoNego": 65535,
+        "speedmode": 129,
+        "speedstatus": 129,
+        "linkstatus": 1,
+        "trap": 1,
+        "maxFrmsz": 1500,
+        "flowCtrl": "",
+        "mac": "54:07:7D:0D:98:33"
+      },
+      {
+        "port": 33,
+        "descp": "",
+        "type": 1,
+        "admin": 1,
+        "autoNego": 65535,
+        "speedmode": 129,
+        "speedstatus": 129,
+        "linkstatus": 1,
+        "trap": 1,
+        "maxFrmsz": 1500,
+        "flowCtrl": "",
+        "mac": "54:07:7D:0D:98:33"
+      }
+    ],
+    "cpu_ports": [
+      {
+        "port": 29,
+        "descp": ""
+      }
+    ]
+  }
+}
