@@ -651,28 +651,12 @@ class GS308E(PageParser):
         super().__init__()
 
 
-class GS308Ev4(GS308E):
+class GS308Ev4(GS108Ev4):
     """Parser for the GS308Ev4 switch."""
 
     def __init__(self) -> None:
         """Initialize the GS308Ev4 parser."""
         super().__init__()
-
-    def parse_switch_metadata(self, page: Response | BaseResponse) -> dict[str, Any]:
-        """Parse switch info from the html page."""
-        tree = html.fromstring(page.content)
-
-        switch_name = get_first_value(tree, '//input[@name="switch_name"]')
-        switch_serial_number = "unknown"
-        self._switch_bootloader = "unknown"
-        self._switch_firmware = "unknown"
-
-        return {
-            "switch_name": switch_name,
-            "switch_serial_number": switch_serial_number,
-            "switch_bootloader": self._switch_bootloader,
-            "switch_firmware": self._switch_firmware,
-        }
 
 
 class EMxSeries(PageParser):
