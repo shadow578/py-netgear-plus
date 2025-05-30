@@ -280,6 +280,25 @@ class GS308E(AutodetectedSwitchModel):
     ALLOWED_COOKIE_TYPES: ClassVar = ["GS108SID", "SID"]
 
 
+class GS308Ev4(GS308E):
+    """Definition for Netgear GS308Ev3 model."""
+
+    MODEL_NAME = "GS308Ev4"
+    PORTS = 8
+    CHECKS_AND_RESULTS: ClassVar = [
+        ("check_login_form_rand", [True]),
+        ("parse_login_title_tag", ["GS308Ev4"]),
+    ]
+    ALLOWED_COOKIE_TYPES: ClassVar = ["SID"]
+
+    SWITCH_INFO_TEMPLATES: ClassVar = [
+        {
+            "method": "get",
+            "url": "http://{ip}/dashboard.cgi"
+        }
+    ]
+
+
 class EMxSeries(AutodetectedSwitchModel):
     """Parent class definition for Netgear GSxxxEMX and XSxxxEM models."""
 
