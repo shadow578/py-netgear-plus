@@ -57,14 +57,14 @@
 <div class="hid_info_cell col-xs-12 col-sm-6">
 <div class="hid_info_title"><span>ml656</span></div>
 <div><span>
-<input id="switchName" name='switch_name' class="input-theme" style="width:130%;color:#fff;" oninput="enableButtons()" maxlength="20" role="input" value="" type="text">
+<input id="switchName" name='switch_name' class="input-theme" style="width:130%;color:#fff;" oninput="enableButtons()" maxlength="20" role="input" value="sw-test" type="text">
 </span></div></div>
 <div class="hid_info_cell col-xs-12 col-sm-6">
 <div class="hid_info_title"><span>ml678</span></div>
 <div><span>54:07:7D:1A:B0:6A</span></div></div>
 <div class="hid_info_cell col-xs-12 col-sm-6">
 <div class="hid_info_title"><span>ml198</span></div>
-<div><span>7H914552A0473</span></div></div>
+<div><span>7H914553C0473</span></div></div>
 <div class="hid_info_cell col-xs-12 col-sm-6">
 <div class="hid_info_title"><span>ml040</span></div>
 <div><span>GS308Ev4</span></div></div>
@@ -118,9 +118,9 @@ CANCEL
 </div>
 </div>
 <div><div class="stealth_mode">
- <span>OFF</span><span>ml293</span></div> 
+ <span>OFF</span><span>ml293</span></div>
 <div class="stealth_mode"  style="color:#00d76f;margin-left:1rem">
- <span>ON</span><span>ml351</span></div></div> 
+ <span>ON</span><span>ml351</span></div></div>
 <div class= "submit_btn">
 <span class="text-primary"><button name='submitLed' onclick='submitLED()' data-react-toolbox="button" class="toolbox_lib_button button_theme_flat button_theme_primary button_theme_mini button button_mini" disabled=''>
 APPLY
@@ -654,7 +654,7 @@ EDIT
 <span class="input_theme_bar input_theme_label input_label">ml042</span>
 </div>
 <input type="text" readOnly="readOnly" class="input-theme" id="portID" value="">
-</div> 
+</div>
 <div class="edit_port_info">
 <div class="edit_item">
 <span class="input_theme_bar input_theme_label input_label">ml234</span>
@@ -674,7 +674,7 @@ EDIT
 <span name='speedTxt' class="selectItem speedText"></span>
 <span class="dropdown_icon icon-expand"></span></p>
 <ul class="dropdown-menu SpeedList" >
-<li class="waves-effect waves-gray"><a >Auto</a></li> 
+<li class="waves-effect waves-gray"><a >Auto</a></li>
 <li class="waves-effect waves-gray"><a>Disable</a></li>
 <li class="waves-effect waves-gray"><a>10M full</a></li>
 <li class="waves-effect waves-gray"><a>100M full</a></li></ul>
@@ -693,17 +693,17 @@ EDIT
 <span name='ingressTxt' class="selectItem IngressText"></span>
 <span class="dropdown_icon icon-expand"></span></p>
 <ul class="dropdown-menu IngressList" >
-<li class="waves-effect waves-gray"><a >No Limit</a></li> 
+<li class="waves-effect waves-gray"><a >No Limit</a></li>
 <li class="waves-effect waves-gray"><a>512 Kbit/s</a></li>
-<li class="waves-effect waves-gray"><a >1 Mbit/s</a></li> 
+<li class="waves-effect waves-gray"><a >1 Mbit/s</a></li>
 <li class="waves-effect waves-gray"><a>2 Mbit/s</a></li>
-<li class="waves-effect waves-gray"><a >4 Mbit/s</a></li> 
-<li class="waves-effect waves-gray"><a >8 Mbit/s</a></li> 
+<li class="waves-effect waves-gray"><a >4 Mbit/s</a></li>
+<li class="waves-effect waves-gray"><a >8 Mbit/s</a></li>
 <li class="waves-effect waves-gray"><a>16 Mbit/s</a></li>
-<li class="waves-effect waves-gray"><a >32 Mbit/s</a></li> 
+<li class="waves-effect waves-gray"><a >32 Mbit/s</a></li>
 <li class="waves-effect waves-gray"><a>64 Mbit/s</a></li>
-<li class="waves-effect waves-gray"><a >128 Mbit/s</a></li> 
-<li class="waves-effect waves-gray"><a >256 Mbit/s</a></li> 
+<li class="waves-effect waves-gray"><a >128 Mbit/s</a></li>
+<li class="waves-effect waves-gray"><a >256 Mbit/s</a></li>
 <li class="waves-effect waves-gray"><a>512 Mbit/s</a></li></ul>
 <input type="hidden" id="IngressSelect" class="hidVal" value=""></div>
 <div class="hr">
@@ -720,17 +720,17 @@ EDIT
 <span name='egressTxt' class="selectItem EgressText"></span>
 <span class="dropdown_icon icon-expand"></span></p>
 <ul class="dropdown-menu EgressList" >
-<li class="waves-effect waves-gray"><a >No Limit</a></li> 
+<li class="waves-effect waves-gray"><a >No Limit</a></li>
 <li class="waves-effect waves-gray"><a>512 Kbit/s</a></li>
-<li class="waves-effect waves-gray"><a >1 Mbit/s</a></li> 
+<li class="waves-effect waves-gray"><a >1 Mbit/s</a></li>
 <li class="waves-effect waves-gray"><a>2 Mbit/s</a></li>
-<li class="waves-effect waves-gray"><a >4 Mbit/s</a></li> 
-<li class="waves-effect waves-gray"><a >8 Mbit/s</a></li> 
+<li class="waves-effect waves-gray"><a >4 Mbit/s</a></li>
+<li class="waves-effect waves-gray"><a >8 Mbit/s</a></li>
 <li class="waves-effect waves-gray"><a>16 Mbit/s</a></li>
-<li class="waves-effect waves-gray"><a >32 Mbit/s</a></li> 
+<li class="waves-effect waves-gray"><a >32 Mbit/s</a></li>
 <li class="waves-effect waves-gray"><a>64 Mbit/s</a></li>
-<li class="waves-effect waves-gray"><a >128 Mbit/s</a></li> 
-<li class="waves-effect waves-gray"><a >256 Mbit/s</a></li> 
+<li class="waves-effect waves-gray"><a >128 Mbit/s</a></li>
+<li class="waves-effect waves-gray"><a >256 Mbit/s</a></li>
 <li class="waves-effect waves-gray"><a>512 Mbit/s</a></li></ul>
 <input type="hidden" class="hidVal" id="EgressSelect" value=""></div>
 <div class="hr">
@@ -748,7 +748,7 @@ EDIT
  <input id="flowControlCheck" type="checkbox" checked="" value="">
  <label></label>
  </div>
-</div> 
+</div>
 <div class= "submit_btn port_status_btn">
 <span class="text-primary"><button name='submitPotedit' onclick="submitPortEdit()" data-react-toolbox="button" class="toolbox_lib_button button_theme_flat button_theme_primary button_theme_mini button button_mini">
 APPLY</button></span>

@@ -20,7 +20,6 @@ from py_netgear_plus.models import (
     GS308E,
     GS308EP,
     GS308EPP,
-    GS308Ev4,
     GS316EPP,
     JGS516PE,
     XS512EM,
@@ -28,6 +27,7 @@ from py_netgear_plus.models import (
     GS105Ev2,
     GS108Ev3,
     GS108PEv3,
+    GS308Ev4,
     JGS524Ev2,
 )
 from py_netgear_plus.netgear_crypt import hex_hmac_md5, merge_hash
@@ -57,9 +57,9 @@ MODEL_PARAMETERS = [
     (
         GS308Ev4,
         "1467252539",
-        "1a9bc5f086a9ecd8e7184f2f602febd3",
-        '<html></html>'
-    )
+        "5f01444681a83b9a39c6e9e1ea2a91db",
+        "<html></html>",
+    ),
     (
         JGS516PE,
         None,
