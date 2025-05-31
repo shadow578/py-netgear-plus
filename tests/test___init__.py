@@ -27,6 +27,7 @@ from py_netgear_plus.models import (
     GS105Ev2,
     GS108Ev3,
     GS108PEv3,
+    GS308Ev4,
     JGS524Ev2,
 )
 from py_netgear_plus.netgear_crypt import hex_hmac_md5, merge_hash
@@ -52,6 +53,12 @@ MODEL_PARAMETERS = [
         "1127757600",
         "3c630eb52109743e94ef671e137b3de0",
         '<html><input name="Gambit" value="cookie_value"></html>',
+    ),
+    (
+        GS308Ev4,
+        "1467252539",
+        "5f01444681a83b9a39c6e9e1ea2a91db",
+        "<html></html>",
     ),
     (
         JGS516PE,
@@ -84,6 +91,7 @@ MODELS_FOR_GET_SWITCH_INFOS = [
     GS308E,
     GS308EP,
     GS308EPP,
+    GS308Ev4,
     GS316EPP,
     JGS516PE,
     JGS524Ev2,
