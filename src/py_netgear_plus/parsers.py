@@ -651,6 +651,14 @@ class GS308E(PageParser):
         super().__init__()
 
 
+class GS308Ev4(GS108Ev4):
+    """Parser for the GS308Ev4 switch."""
+
+    def __init__(self) -> None:
+        """Initialize the GS308Ev4 parser."""
+        super().__init__()
+
+
 class EMxSeries(PageParser):
     """Parser for the GS110EMX switch."""
 
