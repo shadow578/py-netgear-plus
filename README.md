@@ -56,6 +56,7 @@ some basic configuration updates.
 | GS308E    | 8     | V1.00.11                               | V1.00.03            |
 | GS308EP   | 8     | V1.0.0.10, V1.0.1.4                    |                     |
 | GS308EPP  | 8     | V1.0.1.4                               |                     |
+| GS308Ev4  | 8     | V1.0.1.3                               |                     |
 | GS316EP   | 16    | V1.0.4.4                               |                     |
 | GS316EPP  | 16    | V1.0.4.4                               |                     |
 | JGS516PE  | 16    | V2.6.0.48                              |                     |
