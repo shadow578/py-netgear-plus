@@ -336,21 +336,15 @@ class NetgearSwitchConnector:
         self._page_fetcher.clear_cookie()
         return response.status_code != status_code_not_found
 
-
-    def reboot(self) -> bool:
+    def reboot(self) -> None:
         """Reboot the switch."""
-        try:
-            self.fetch_page_from_templates(
-                self.switch_model.SWITCH_REBOOT_TEMPLATES
-            )
-            return True
-        except PageNotLoadedError as error:
-            _LOGGER.debug(
-                "[NetgearSwitchConnector.reboot] "
-                "caught PageNotLoadedError"
-            )
-            return False
+        if not self.switch_model.SWITCH_REBOOT_TEMPLATES:
+            return
 
+        try:
+            self.fetch_page_from_templates(self.switch_model.SWITCH_REBOOT_TEMPLATES)
+        except PageNotLoadedError:
+            _LOGGER.debug("[NetgearSwitchConnector.reboot] caught PageNotLoadedError")
 
     def fetch_page(self, method: str, url: str, data: dict) -> Response | BaseResponse:
         """Fetch url and retry when first response is a redirect to the login page."""
