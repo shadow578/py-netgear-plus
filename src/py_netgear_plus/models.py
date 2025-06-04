@@ -76,6 +76,13 @@ class AutodetectedSwitchModel:
     CYCLE_POE_PORT_TEMPLATES: ClassVar = []
     POE_PORT_STATUS_TEMPLATES: ClassVar = []
     LOGOUT_TEMPLATES: ClassVar = [{"method": "post", "url": "http://{ip}/logout.cgi"}]
+    SWITCH_REBOOT_TEMPLATES: ClassVar = [
+        {
+            "method": "post",
+            "url": "http://{ip}/device_reboot.cgi",
+            "params": {"CBox": "literal:on", "hash": "_client_hash"},
+        }
+    ]
 
     def __init__(self) -> None:
         """Empty contructor."""
